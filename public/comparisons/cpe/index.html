@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Old vs New — UI Comparison</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       SETTINGS
+       ═══════════════════════════════════════════════════════════ */
+    :root {
+      --pair-duration: 7s;    /* time per comparison pair                  */
+      --radius:   14px;       /* screenshot corner radius                 */
+      --card-w:   78vw;       /* card width — full size, not shrunk       */
+      --card-max: 1040px;     /* card max width                           */
+      --border-color: #a8c4e6;
+      --border-bg:    #c7daf0;
+      --border-size:  14px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESET
+       ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Geist Sans', 'Geist', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       BACKGROUND
+       ═══════════════════════════════════════════════════════════ */
+    body {
+      background: transparent;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       STAGE
+       ═══════════════════════════════════════════════════════════ */
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       COMPARISON PAIR
+
+       Full-size slider effect. Old and new are stacked on top
+       of each other (same position, same size). The old card
+       slides out to the left while the new card slides in from
+       the right — like swiping a deck of cards.
+
+       Timeline per pair:
+         1. Old card slides in from right → holds (desaturated)
+         2. Old slides out left, new slides in from right
+            simultaneously — the swap moment
+         3. New holds centre at full color
+         4. Pair fades out, next pair begins
+
+       ── HOW TO ADD A PAIR ──
+       1. Put screenshots in assets/:
+            assets/old-yourname.png
+            assets/new-yourname.png
+       2. Copy any "comparison-pair" block
+       3. Paste before "ADD MORE PAIRS" comment
+       4. Update both img src paths
+       5. JS handles timing automatically
+
+       ── HOW TO REMOVE / REORDER ──
+       Delete or cut+paste comparison-pair blocks.
+
+       ── TIMING ──
+       Edit --pair-duration in :root (time per pair).
+       ═══════════════════════════════════════════════════════════ */
+    .comparison-pair {
+      position: absolute;
+      opacity: 0;
+      will-change: opacity;
+    }
+
+    /* ── CARD (shared) — full size ── */
+    .card {
+      position: relative;
+      width: min(var(--card-w), var(--card-max));
+      padding: var(--border-size);
+      border-radius: calc(var(--radius) + var(--border-size));
+      background: var(--border-bg);
+      border: 1.5px solid var(--border-color);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22),
+                  0 4px 16px  rgba(0, 0, 0, 0.10);
+      will-change: transform, opacity;
+    }
+    .card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius);
+    }
+
+    /* old and new stack in the same spot */
+    .card-old, .card-new {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+    }
+
+    /* ── OLD: shown as-is, no filters ── */
+    .card-old {
+      z-index: 2;
+    }
+
+    /* ── NEW: sits behind old, peeks in during hold ── */
+    .card-new {
+      z-index: 1;
+    }
+
+    /* ── LABELS ── */
+    .label {
+      position: absolute;
+      top: calc(var(--border-size) + 10px);
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+      opacity: 0;
+    }
+    .card-old .label {
+      left: calc(var(--border-size) + 10px);
+      background: rgba(0, 0, 0, 0.5);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .card-new .label {
+      left: calc(var(--border-size) + 10px);
+      background: rgba(50, 170, 90, 0.8);
+      color: #fff;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       DESCRIPTION — text below the card describing the pair.
+       Shows throughout both old and new phases.
+       Edit the text inside <p class="description"> in each pair.
+       ═══════════════════════════════════════════════════════════ */
+    .description {
+      position: absolute;
+      bottom: -44px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: min(var(--card-w), var(--card-max));
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       BRAND
+       ═══════════════════════════════════════════════════════════ */
+    .brand {
+      position: fixed;
+      bottom: 0.5px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      animation: brand-in 1s 0.6s ease forwards;
+    }
+    .brand img {
+      height: 62px;
+      width: auto;
+      opacity: 0.45;
+      filter: brightness(1.2);
+    }
+    @keyframes brand-in {
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ┌─────────────────────────────────────────────────────────────┐
+       │                                                             │
+       │   HOW TO USE THIS TEMPLATE                                  │
+       │                                                             │
+       │   Everything below is modular. Each "comparison-pair"       │
+       │   block is one self-contained before/after slide.           │
+       │   JS auto-calculates all timing — no CSS edits needed.      │
+       │                                                             │
+       │   ── ADD A NEW PAIR ──                                      │
+       │   1. Copy the TEMPLATE block at the bottom of this section  │
+       │   2. Paste it before the "END OF PAIRS" comment             │
+       │   3. Change the three things marked with ✎:                 │
+       │        • old image src                                      │
+       │        • new image src                                      │
+       │        • description text                                   │
+       │   4. Done. JS handles timing for any number of pairs.       │
+       │                                                             │
+       │   ── REMOVE A PAIR ──                                       │
+       │   Delete the entire comparison-pair block (from the         │
+       │   opening <!-- PAIR comment to the closing </div>).         │
+       │                                                             │
+       │   ── REORDER PAIRS ──                                       │
+       │   Cut a whole comparison-pair block and paste it in         │
+       │   the position you want. Order in HTML = order on screen.   │
+       │                                                             │
+       │   ── CHANGE TIMING ──                                       │
+       │   Edit --pair-duration in :root at the top of <style>.      │
+       │   This is the time per pair (default 7s).                   │
+       │   Total loop = pairs × pair-duration.                       │
+       │                                                             │
+       │   ── DESCRIPTION TEXT ──                                    │
+       │   Each pair has a <p class="description"> line.             │
+       │   Edit the text to describe what changed.                   │
+       │   To hide it: delete the <p> line (or leave it empty).      │
+       │                                                             │
+       │   ── LABELS ──                                              │
+       │   "Before" and "After" pills appear automatically.          │
+       │   To change the text, edit the <span class="label"> tags.   │
+       │   To hide labels: delete the <span> tags from that pair.    │
+       │                                                             │
+       │   ── BRAND LOGO ──                                          │
+       │   The Cybus logo is below .stage, near the bottom.          │
+       │   To hide: delete or comment out the <div class="brand">.   │
+       │                                                             │
+       │   ── BLUE BORDER FRAME ──                                   │
+       │   Controlled in :root:                                      │
+       │     --border-bg    → fill color                             │
+       │     --border-color → stroke color                           │
+       │     --border-size  → padding thickness                      │
+       │                                                             │
+       └─────────────────────────────────────────────────────────────┘ -->
+
+
+  <!-- ══════════════════════════════════════════
+       PAIR 1
+       ✎ Change: old img src, new img src, description
+       ══════════════════════════════════════════ -->
+  <div class="comparison-pair">
+    <div class="card card-old">
+      <img src="assets/Data_Explorer_Old.png" alt="">   <!-- ✎ old screenshot -->
+      <span class="label">Before</span>
+    </div>
+    <div class="card card-new">
+      <img src="assets/Data_Explorer_New.png" alt="">   <!-- ✎ new screenshot -->
+      <span class="label">After</span>
+    </div>
+     <!-- ✎ description -->
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       PAIR 2
+       ✎ Change: old img src, new img src, description
+       ══════════════════════════════════════════ -->
+  <div class="comparison-pair">
+    <div class="card card-old">
+      <img src="assets/Modal_Component_Old.png" alt="">        <!-- ✎ old screenshot -->
+      <span class="label">Before</span>
+    </div>
+    <div class="card card-new">
+      <img src="assets/Modal_Component_New.png" alt="" style="max-width: 65%; margin: 0 auto;">  <!-- ✎ new screenshot, scaled down slightly -->
+      <span class="label">After</span>
+    </div>
+    <!-- ✎ description -->
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       PAIR 3
+       ✎ Change: old img src, new img src, description
+       ══════════════════════════════════════════ -->
+  <div class="comparison-pair">
+    <div class="card card-old">
+      <img src="assets/Service_Logs_Old.png" alt="">        <!-- ✎ old screenshot -->
+      <span class="label">Before</span>
+    </div>
+    <div class="card card-new">
+      <img src="assets/Service_Logs_New.png" alt="">        <!-- ✎ new screenshot -->
+      <span class="label">After</span>
+    </div>
+      <!-- ✎ description -->
+  </div>
+
+  <div class="comparison-pair">
+    <div class="card card-old">
+      <img src="assets/Service_Overview_Old.png" alt="">        <!-- ✎ old screenshot -->
+      <span class="label">Before</span>
+    </div>
+    <div class="card card-new">
+      <img src="assets/Service_Overview_New.png" alt="">        <!-- ✎ new screenshot -->
+      <span class="label">After</span>
+    </div>
+    <!-- ✎ description -->
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+
+       COPY-PASTE TEMPLATE — duplicate this block to add a new pair:
+
+       <div class="comparison-pair">
+         <div class="card card-old">
+           <img src="assets/YOUR-OLD-IMAGE.png" alt="">
+           <span class="label">Before</span>
+         </div>
+         <div class="card card-new">
+           <img src="assets/YOUR-NEW-IMAGE.png" alt="">
+           <span class="label">After</span>
+         </div>
+         <p class="description">Your description here</p>
+       </div>
+
+       ══════════════════════════════════════════════════════════════ -->
+
+
+  <!-- ══════════════════════════════════════════
+       END OF PAIRS — paste new pairs ABOVE this line
+       ══════════════════════════════════════════ -->
+
+
+</div><!-- end .stage -->
+
+<!-- ═══════════════════════════════════════════
+     BRAND — Cybus logo
+     ═══════════════════════════════════════════ -->
+<div class="brand">
+  <img src="assets/cybus-logo.svg" alt="Cybus">
+</div>
+
+<script>
+  /**
+   * ═══════════════════════════════════════════════════════════
+   * SLIDER COMPARISON ANIMATOR
+   * ═══════════════════════════════════════════════════════════
+   *
+   * Timeline per pair (% of its time slice):
+   *
+   *   0%  → 8%    Old slides in from right, settles centre.
+   *                "Before" label fades in.
+   *   8%  → 35%   Old holds — viewer sees the before state.
+   *  35%  → 50%   THE SWAP: old slides out left,
+   *                new slides in from right simultaneously.
+   *                "Before" fades, "After" appears.
+   *  50%  → 85%   New holds centre — the hero moment.
+   *  85%  → 95%   Pair fades out.
+   *  95%  → 100%  Gap before next pair.
+   *
+   * Everything is auto-calculated from pair count.
+   * ═══════════════════════════════════════════════════════════
+   */
+  (function () {
+    const pairs   = document.querySelectorAll('.comparison-pair');
+    const count   = pairs.length;
+    const pairDur = parseFloat(getComputedStyle(document.documentElement)
+                      .getPropertyValue('--pair-duration')) || 7;
+    const totalDur = pairDur * count;
+    const s = 100 / count;  /* slice per pair in % */
+
+    /* ── % breakpoints within each pair's slice ── */
+    const enterEnd   = s * 0.08;
+    const holdOld    = s * 0.35;
+    const swapDone   = s * 0.50;
+    const holdNew    = s * 0.85;
+    const exitDone   = s * 0.95;
+
+    pairs.forEach((pair, i) => {
+      const delay = i * pairDur;
+      const t = `${totalDur}s cubic-bezier(0.4,0,0.2,1) ${delay}s infinite`;
+
+      pair.style.animation = `pair-fade ${t}`;
+      pair.querySelector('.card-old').style.animation  = `old-slide ${t}`;
+      pair.querySelector('.card-new').style.animation  = `new-slide ${t}`;
+      pair.querySelector('.card-old .label').style.animation = `label-old ${t}`;
+      pair.querySelector('.card-new .label').style.animation = `label-new ${t}`;
+
+      const desc = pair.querySelector('.description');
+      if (desc) desc.style.animation = `desc-fade ${t}`;
+    });
+
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+
+      /* ── Pair wrapper: fade in / out ── */
+      @keyframes pair-fade {
+        0%            { opacity: 0; }
+        ${enterEnd}%  { opacity: 1; }
+        ${holdNew}%   { opacity: 1; }
+        ${exitDone}%  { opacity: 0; }
+        100%          { opacity: 0; }
+      }
+
+      /* ── OLD card ──
+           Enters from right with a slight upward arc (rotate + translateY),
+           settles flat. During swap it arcs out to the left and downward —
+           like a carousel wheel. The curve makes old and new feel like
+           they're on the same circular track. ── */
+      @keyframes old-slide {
+        0%            { transform: translate(-50%, -50%) translateX(120%) translateY(30px) rotate(3deg); opacity: 0; }
+        ${enterEnd}%  { transform: translate(-50%, -50%) translateX(0)    translateY(0)    rotate(0);    opacity: 1; }
+        ${holdOld * 0.5}% { transform: translate(-50%, -50%) translateX(0) translateY(0)   rotate(0);    opacity: 1; }
+        ${holdOld}%   { transform: translate(-50%, -50%) translateX(-3%)  translateY(2px)  rotate(-0.5deg); opacity: 1; }
+        ${swapDone}%  { transform: translate(-50%, -50%) translateX(-120%) translateY(30px) rotate(-3deg); opacity: 0; }
+        100%          { transform: translate(-50%, -50%) translateX(-120%) translateY(30px) rotate(-3deg); opacity: 0; }
+      }
+
+      /* ── NEW card ──
+           Mirrors the old card's arc — enters from the right dipping
+           down then rising to centre, on the same curved path.
+           They feel like two cards on a rotating wheel. ── */
+      @keyframes new-slide {
+        0%            { transform: translate(-50%, -50%) translateX(120%) translateY(30px) rotate(3deg); opacity: 0; }
+        ${holdOld}%   { transform: translate(-50%, -50%) translateX(120%) translateY(30px) rotate(3deg); opacity: 0; }
+        ${swapDone}%  { transform: translate(-50%, -50%) translateX(0)    translateY(0)    rotate(0);    opacity: 1; }
+        ${holdNew}%   { transform: translate(-50%, -50%) translateX(0)    translateY(0)    rotate(0);    opacity: 1; }
+        ${exitDone}%  { transform: translate(-50%, -50%) translateX(-120%) translateY(30px) rotate(-3deg); opacity: 0; }
+        100%          { transform: translate(-50%, -50%) translateX(-120%) translateY(30px) rotate(-3deg); opacity: 0; }
+      }
+
+      /* ── "Before" label: visible while old is showing ── */
+      @keyframes label-old {
+        0%            { opacity: 0; }
+        ${enterEnd + 2}% { opacity: 1; }
+        ${holdOld - 2}%  { opacity: 1; }
+        ${holdOld}%      { opacity: 0; }
+        100%             { opacity: 0; }
+      }
+
+      /* ── "After" label: visible while new is showing ── */
+      @keyframes label-new {
+        0%            { opacity: 0; }
+        ${swapDone}%  { opacity: 0; }
+        ${swapDone + 2}% { opacity: 1; }
+        ${holdNew}%      { opacity: 1; }
+        ${exitDone}%     { opacity: 0; }
+        100%             { opacity: 0; }
+      }
+
+      /* ── Description: fades in after enter, stays through both phases ── */
+      @keyframes desc-fade {
+        0%               { opacity: 0; transform: translateX(-50%) translateY(6px); }
+        ${enterEnd + 2}% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        ${holdNew}%      { opacity: 1; transform: translateX(-50%) translateY(0); }
+        ${exitDone}%     { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+        100%             { opacity: 0; }
+      }
+    `;
+    document.head.appendChild(sheet);
+  })();
+</script>
+
+</body>
+</html>

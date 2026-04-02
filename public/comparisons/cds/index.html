@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Overview — Showcase</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       SETTINGS
+       ═══════════════════════════════════════════════════════════ */
+    :root {
+      --duration: 18s;        /* total loop (split across all slides)     */
+      --radius:   14px;       /* screenshot corner radius                 */
+      --card-w:   78vw;       /* card width                               */
+      --card-max: 1040px;     /* card max width                           */
+      --border-color: #a8c4e6;       /* solid light blue border              */
+      --border-bg:    #c7daf0;       /* light blue fill — clearly visible    */
+      --border-size:  14px;          /* consistent padding on all sides      */
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESET
+       ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Geist Sans', 'Geist', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       BACKGROUND — warm neutral gradient
+       ═══════════════════════════════════════════════════════════ */
+    body {
+      background: transparent;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       STAGE
+       ═══════════════════════════════════════════════════════════ */
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1000px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SHOWCASE ITEM — wrapper for each slide
+
+       JS automatically assigns one of THREE transition effects
+       in rotation so consecutive slides always look different:
+
+         fx-slide  → enters from right, exits left, with Y-tilt
+         fx-rise   → floats up from below with a subtle rotation
+         fx-flip   → 3D tilt on X-axis, like a card being placed
+
+       The cycle repeats:  slide → rise → flip → slide → rise → ...
+
+       ── HOW TO CHANGE EFFECTS ──
+
+       Option 1 — Let JS rotate them automatically (default).
+                  Just add/remove slides, effects are assigned.
+
+       Option 2 — Force a specific effect on any slide by
+                  adding the class to the showcase-item div:
+
+                  <div class="showcase-item fx-rise">
+                                             ^^^^^^^^
+                  Available: fx-slide, fx-rise, fx-flip
+
+       Option 3 — Edit the @keyframes below to tweak motion.
+                  Each effect has the same structure:
+                    0%   → starting position (hidden, offset)
+                    5%   → fully visible, settled in place
+                    12%  → still holding
+                    16%  → exiting (hidden, offset opposite)
+                    100% → stays hidden for rest of loop
+
+       Option 4 — Add your own effect:
+                  1. Create a new .fx-NAME class + @keyframes
+                  2. Add 'fx-NAME' to the effects array in JS
+                  3. It will be included in the rotation
+       ═══════════════════════════════════════════════════════════ */
+    .showcase-item {
+      position: absolute;
+      opacity: 0;
+      will-change: transform, opacity;
+    }
+
+    /* ── EFFECT 1 of 3: Horizontal slide + perspective Y-tilt ── */
+    .fx-slide {
+      animation: fx-slide var(--duration) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    @keyframes fx-slide {
+      0%   { opacity: 0; transform: translateX(140px) rotateY(-5deg); }
+      5%   { opacity: 1; transform: translateX(0)     rotateY(0); }
+      12%  { opacity: 1; transform: translateX(0)     rotateY(0); }
+      16%  { opacity: 0; transform: translateX(-140px) rotateY(5deg); }
+      100% { opacity: 0; transform: translateX(-140px) rotateY(5deg); }
+    }
+
+    /* ── EFFECT 2 of 3: Rise up + gentle Z-rotation ── */
+    .fx-rise {
+      animation: fx-rise var(--duration) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    @keyframes fx-rise {
+      0%   { opacity: 0; transform: translateY(80px) rotate(1.5deg); }
+      5%   { opacity: 1; transform: translateY(0)    rotate(0); }
+      12%  { opacity: 1; transform: translateY(0)    rotate(0); }
+      16%  { opacity: 0; transform: translateY(-60px) rotate(-1.5deg); }
+      100% { opacity: 0; transform: translateY(-60px) rotate(-1.5deg); }
+    }
+
+    /* ── EFFECT 3 of 3: 3D X-axis tilt (cinematic card-lay) ── */
+    .fx-flip {
+      animation: fx-flip var(--duration) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    @keyframes fx-flip {
+      0%   { opacity: 0; transform: rotateX(8deg) translateY(40px); }
+      5%   { opacity: 1; transform: rotateX(0)    translateY(0); }
+      12%  { opacity: 1; transform: rotateX(0)    translateY(0); }
+      16%  { opacity: 0; transform: rotateX(-8deg) translateY(-30px); }
+      100% { opacity: 0; transform: rotateX(-8deg) translateY(-30px); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CARD — light blue border-frame around every screenshot
+
+       This wraps each screenshot in a clearly visible, light
+       blue padded frame so all slides look consistent regardless
+       of each image's own background color.
+
+       Customise in :root:
+         --border-bg    → fill color of the frame  (light blue)
+         --border-color → border stroke color       (medium blue)
+         --border-size  → padding thickness on all 4 sides
+         --radius       → corner rounding of the screenshot
+       ═══════════════════════════════════════════════════════════ */
+    .card {
+      width: min(var(--card-w), var(--card-max));
+      padding: var(--border-size);
+      border-radius: calc(var(--radius) + var(--border-size));
+      background: var(--border-bg);
+      border: 1.5px solid var(--border-color);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22),
+                  0 4px 16px  rgba(0, 0, 0, 0.10);
+    }
+
+    .card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       BRAND — Cybus logo + wordmark, top-left
+       Positioned like a confident brand stamp on a keynote.
+       To hide: delete or comment out the .brand div in HTML.
+       ═══════════════════════════════════════════════════════════ */
+    .brand {
+      position: fixed;
+      bottom: 1px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      animation: brand-in 1s 0.6s ease forwards;
+    }
+    .brand img {
+      height: 62px;
+      width: auto;
+      opacity: 0.45;
+      filter: brightness(1.2);
+    }
+    .brand span {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.35);
+    }
+    @keyframes brand-in {
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ┌─────────────────────────────────────────────────────────────┐
+       │                                                             │
+       │   HOW TO USE THIS TEMPLATE                                  │
+       │                                                             │
+       │   SCREENSHOTS                                               │
+       │   ─────────────                                             │
+       │   1. Drop images into the  assets/  folder.                │
+       │   2. Each "showcase-item" block below = one slide.         │
+       │      Update <img src="assets/YOUR-FILE.png"> to match.     │
+       │                                                             │
+       │   ADD A SLIDE                                               │
+       │   ────────────                                              │
+       │   Copy any showcase-item block, paste it before the         │
+       │   "ADD MORE SLIDES" comment, change the img src.            │
+       │   JS auto-staggers timing AND assigns effects.              │
+       │                                                             │
+       │   REMOVE A SLIDE                                            │
+       │   ───────────────                                           │
+       │   Delete the entire showcase-item block. Done.              │
+       │                                                             │
+       │   REORDER SLIDES                                            │
+       │   ───────────────                                           │
+       │   Cut + paste blocks in your preferred order.               │
+       │                                                             │
+       │   TIMING                                                    │
+       │   ──────                                                    │
+       │   Edit --duration in :root at the top of <style>.           │
+       │   Rule of thumb: ~3s per slide. 6 slides → 18s.             │
+       │                                                             │
+       │   TRANSITION EFFECTS                                        │
+       │   ──────────────────                                        │
+       │   3 effects rotate automatically per slide:                 │
+       │     fx-slide  — horizontal enter/exit with Y-tilt           │
+       │     fx-rise   — float up/down with subtle rotation          │
+       │     fx-flip   — 3D X-axis tilt (cinematic card feel)        │
+       │                                                             │
+       │   To FORCE a specific effect on a slide, add the class:     │
+       │     <div class="showcase-item fx-rise">                     │
+       │                                                             │
+       │   To EDIT an effect's motion, find its @keyframes in        │
+       │   the <style> block (search for "EFFECT 1", "EFFECT 2",    │
+       │   "EFFECT 3") and tweak the transform values.               │
+       │                                                             │
+       │   To ADD a new effect:                                      │
+       │     1. Create .fx-yourname class + @keyframes in CSS        │
+       │     2. Add 'fx-yourname' to the effects array in <script>   │
+       │                                                             │
+       │   BLUE BORDER FRAME                                         │
+       │   ─────────────────                                         │
+       │   The light blue padding around each screenshot is          │
+       │   controlled by these :root variables:                      │
+       │     --border-bg    → fill color (light blue)                │
+       │     --border-color → stroke color (medium blue)             │
+       │     --border-size  → padding thickness (all 4 sides)        │
+       │                                                             │
+       └─────────────────────────────────────────────────────────────┘ -->
+
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 1
+       ══════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="card">
+      <img src="assets/color.png" alt="">
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 2
+       ══════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="card">
+      <img src="assets/dualdate.png" alt="">
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 3
+       ══════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="card">
+      <img src="assets/input.png" alt="">
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 4
+       ══════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="card">
+      <img src="assets/Table1.png" alt="">
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 5
+       ══════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="card">
+      <img src="assets/Table2.png" alt="">
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SLIDE 6
+       ══════════════════════════════════════════ -->
+  <div class="showcase-item">
+    <div class="card">
+      <img src="assets/Table3.png" alt="">
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       ADD MORE SLIDES HERE
+       Copy any block above, paste here, change src.
+       ══════════════════════════════════════════ -->
+
+
+</div><!-- end .stage -->
+
+<!-- ═══════════════════════════════════════════
+     BRAND — Cybus logo + wordmark
+     ═══════════════════════════════════════════ -->
+
+<div class="brand">
+  <img src="assets/cybus-logo.svg" alt="Cybus">
+  <!-- <span>Cybus</span> -->
+</div>
+
+
+<script>
+  /**
+   * ═══════════════════════════════════════════════════════════
+   * AUTO-STAGGER + EFFECT ROTATION
+   * ═══════════════════════════════════════════════════════════
+   *
+   * This script does three things automatically:
+   *
+   * 1. TIMING — Counts how many .showcase-item slides exist
+   *    and spaces their animation delays evenly across the loop.
+   *    Add or remove slides freely; timing adjusts on its own.
+   *
+   * 2. EFFECTS — Assigns transition effects in rotation:
+   *      Slide 1 → fx-slide
+   *      Slide 2 → fx-rise
+   *      Slide 3 → fx-flip
+   *      Slide 4 → fx-slide   (cycle repeats)
+   *      ...
+   *    If you manually set a class (e.g. class="showcase-item fx-rise"),
+   *    that slide keeps your choice and is skipped by auto-assign.
+   *
+   * 3. KEYFRAMES — Rewrites the @keyframes so each slide gets
+   *    an equal % of the total loop duration.
+   *
+   * ── TO ADD A NEW CUSTOM EFFECT ──
+   *    1. Define .fx-yourname { animation: ... } + @keyframes in CSS
+   *    2. Add 'fx-yourname' to the array below
+   *    3. It joins the rotation automatically
+   * ═══════════════════════════════════════════════════════════
+   */
+  (function () {
+    const items  = document.querySelectorAll('.showcase-item');
+    const count  = items.length;
+    const dur    = parseFloat(getComputedStyle(document.documentElement)
+                     .getPropertyValue('--duration')) || 18;
+
+    /* ── Effect list: add/remove names here to change the rotation ── */
+    const effects = ['fx-slide', 'fx-rise', 'fx-flip'];
+
+    items.forEach((item, i) => {
+      /* evenly distribute animation start times */
+      item.style.animationDelay = (i * dur / count) + 's';
+
+      /* assign effect class unless one was set manually in HTML */
+      const hasManualEffect = effects.some(fx => item.classList.contains(fx));
+      if (!hasManualEffect) {
+        item.classList.add(effects[i % effects.length]);
+      }
+    });
+
+    /* ── Rewrite keyframes to fit the current slide count ── */
+    const slice = 100 / count;            /* % of loop each slide owns */
+    const t1 = 5;                         /* % where enter completes   */
+    const t2 = Math.max(t1 + 2, slice - 5); /* % where hold ends      */
+    const t3 = slice;                     /* % where slide is gone     */
+
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      @keyframes fx-slide {
+        0%       { opacity: 0; transform: translateX(140px) rotateY(-5deg); }
+        ${t1}%   { opacity: 1; transform: translateX(0)     rotateY(0); }
+        ${t2}%   { opacity: 1; transform: translateX(0)     rotateY(0); }
+        ${t3}%   { opacity: 0; transform: translateX(-140px) rotateY(5deg); }
+        100%     { opacity: 0; transform: translateX(-140px) rotateY(5deg); }
+      }
+      @keyframes fx-rise {
+        0%       { opacity: 0; transform: translateY(80px) rotate(1.5deg); }
+        ${t1}%   { opacity: 1; transform: translateY(0)    rotate(0); }
+        ${t2}%   { opacity: 1; transform: translateY(0)    rotate(0); }
+        ${t3}%   { opacity: 0; transform: translateY(-60px) rotate(-1.5deg); }
+        100%     { opacity: 0; transform: translateY(-60px) rotate(-1.5deg); }
+      }
+      @keyframes fx-flip {
+        0%       { opacity: 0; transform: rotateX(8deg) translateY(40px); }
+        ${t1}%   { opacity: 1; transform: rotateX(0)    translateY(0); }
+        ${t2}%   { opacity: 1; transform: rotateX(0)    translateY(0); }
+        ${t3}%   { opacity: 0; transform: rotateX(-8deg) translateY(-30px); }
+        100%     { opacity: 0; transform: rotateX(-8deg) translateY(-30px); }
+      }
+    `;
+    document.head.appendChild(sheet);
+
+  })();
+</script>
+
+</body>
+</html>
