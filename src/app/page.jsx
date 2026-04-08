@@ -40,11 +40,11 @@ function ScaledIframe({src,title}){
     const measure=()=>{if(!ref.current)return;const w=ref.current.clientWidth;const h=ref.current.clientHeight;const sc=Math.min(w/1440,h/900);setS(sc);setOff({x:(w-1440*sc)/2,y:(h-900*sc)/2})};
     measure();window.addEventListener("resize",measure);return()=>window.removeEventListener("resize",measure);
   },[]);
-  return <div ref={ref} style={{position:"absolute",inset:0,overflow:"hidden",background:"#1a1a1a"}}><iframe src={src} title={title} style={{width:1440,height:900,border:"none",pointerEvents:"none",transformOrigin:"top left",transform:`translate(${off.x}px,${off.y}px) scale(${s})`,display:"block"}}/></div>;
+  return <div ref={ref} style={{position:"absolute",inset:0,overflow:"hidden"}}><iframe src={src} title={title} style={{width:1440,height:900,border:"none",pointerEvents:"none",transformOrigin:"top left",transform:`translate(${off.x}px,${off.y}px) scale(${s})`,display:"block"}}/></div>;
 }
 function V({top,left,right,bottom}){return <div style={{position:"absolute",width:5,height:5,background:"var(--bg)",border:"0.5px solid var(--vertex)",...(top!=null?{top:top-2.5}:{}),...(bottom!=null?{bottom:bottom-2.5}:{}),...(left!=null?{left:left-2.5}:{}),...(right!=null?{right:right-2.5}:{}),zIndex:10,pointerEvents:"none"}}/>}
 export default function Page(){
-  const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(85.7),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false);
+  const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false);
   const hex2rgb=(h)=>{const v=parseInt(h.slice(1),16);return[(v>>16)&255,(v>>8)&255,v&255]};
   const rgb2hex=(r,g,b)=>"#"+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,"0")).join("");
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -62,10 +62,9 @@ export default function Page(){
   const interpPal=(v)=>{let lo=ANCH[0],hi=ANCH[ANCH.length-1];for(let i=0;i<ANCH.length-1;i++){if(v>=ANCH[i].p&&v<=ANCH[i+1].p){lo=ANCH[i];hi=ANCH[i+1];break}}const t=hi.p===lo.p?0:(v-lo.p)/(hi.p-lo.p);const l=(k)=>lerpHex(lo[k],hi[k],t);const bg=l("bg"),fg=l("fg");const lum=(parseInt(bg.slice(1,3),16)*299+parseInt(bg.slice(3,5),16)*587+parseInt(bg.slice(5,7),16)*114)/1000;return{bg,fg,f2:l("f2"),f3:l("f3"),f4:l("f4"),tl:l("tl"),cd:l("cd"),hg:l("hg"),isLight:lum>140,bd:lum>140?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.08)",nb:lum>140?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.12)",hb:lum>140?"rgba(0,0,0,0.04)":"rgba(255,255,255,0.05)",la:lum>140?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.08)",ht:lum>140?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.1)",vt:lum>140?"rgba(0,0,0,0.15)":"rgba(255,255,255,0.2)",tb:lum>140?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.1)",thb:lum>140?"rgba(0,0,0,0.12)":"rgba(255,255,255,0.15)"}};
   const cp=interpPal(sv);const isLight=cp.isLight;
   const TABS=[
-    {l:"For anyone",t:"I'm Akash Trivedi, a Product Designer focused on B2B SaaS, IoT platforms, and AI-driven UX. I create digital products that simplify complexity, improve usability, and bring clarity to enterprise experiences."},
+    {l:"For anyone",t:"Akash Trivedi is a Product Designer at Cybus, focused on B2B SaaS, IoT platforms, and AI-driven UX. I create digital products that simplify complexity, improve usability, and bring clarity to enterprise experiences."},
     {l:"Product & Systems",t:"I design systems and interfaces that make complex products feel structured, intuitive, and refined. My work brings together product thinking, research, and interface design to create clarity at scale."},
-    {l:"Health",t:"I'm especially interested in the health and mental health space, where thoughtful design can have meaningful human impact. Building products in this area is a long-term direction I care deeply about."},
-    {l:"Impact",t:"I'm open to contributing to meaningful initiatives, including volunteer work, that support people in practical and human-centered ways."},
+    {l:"Open to Collaborate",t:"I'm open to volunteering my design skills for products in the health and mental health space. If you're building something that supports wellbeing and could use a product designer, I'd love to contribute."},
     {l:"Culture",t:"Much of my creative inspiration comes from the visual language of everyday life — streets, signs, letterforms, walls, and movement. I'm particularly drawn to street photography, typography, and graffiti culture."},
     {l:"Motion",t:"When I'm away from the screen, I'm usually riding through unfamiliar places, going for a run, or trying to stay honest with a daily sun salutation practice."},
   ];
@@ -142,7 +141,7 @@ export default function Page(){
 .pd{padding-left:clamp(16px,3.2vw,32px);padding-right:clamp(16px,3.2vw,32px)}
 .hr{height:100vh;display:flex;flex-direction:column;background:var(--hg);transition:background .35s;position:relative;overflow:hidden;padding:0}
 .tgr{flex:1;display:grid;gap:4px;min-height:0;overflow:hidden;padding:clamp(8px,1.5vw,16px)}
-.hr-bot{flex-shrink:0;height:280px;padding:16px clamp(16px,3.2vw,32px) 80px;display:flex;flex-direction:column;justify-content:flex-start}
+.hr-bot{flex-shrink:0;height:280px;padding:16px clamp(16px,3.2vw,32px) 80px;display:flex;flex-direction:column;justify-content:flex-start;position:relative}
 .tgc{width:100%;height:100%;border-radius:9999px;position:relative;cursor:pointer;transition:background .45s cubic-bezier(.4,0,.2,1),transform .15s ease,box-shadow .3s ease,border-color .3s;border:1px solid rgba(128,128,128,0.2)}
 .tgc.off{background:rgba(255,255,255,0.06)}
 .tgc.on{background:#3B82F6;border-color:rgba(59,130,246,0.5)}
@@ -161,13 +160,15 @@ export default function Page(){
 .htabs{display:flex;flex-wrap:wrap;gap:clamp(12px,2vw,24px);margin-bottom:clamp(12px,1.5vw,20px)}
 .htab{font-size:clamp(12px,1.2vw,14px);font-weight:400;color:var(--f3);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;position:relative;transition:color .3s}.htab:hover{color:var(--fg)}
 .htab.a{color:var(--fg);font-weight:500}
-.htxt{max-width:50%;position:relative}
-.htxt-item{transition:opacity .3s,transform .3s cubic-bezier(.4,0,.2,1)}
-.htxt-item.hide{position:absolute;top:0;left:0;right:0;opacity:0;transform:translateY(4px);pointer-events:none}
-.htxt-item.show{position:relative;opacity:1;transform:translateY(0)}
+.htxt{max-width:50%;display:grid}
+.htxt-item{grid-area:1/1;transition:opacity .3s,transform .3s cubic-bezier(.4,0,.2,1)}
+.htxt-item.hide{opacity:0;transform:translateY(4px);pointer-events:none}
+.htxt-item.show{opacity:1;transform:translateY(0)}
 .htxt-item p{font-size:clamp(18px,2.5vw,24px);font-weight:400;color:var(--fg);line-height:1.45;letter-spacing:-.015em;margin:0}
 .hn{font-weight:500;position:relative;display:inline;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s;cursor:default}.hn:hover{border-color:var(--fg)}
-.hni{position:absolute;right:clamp(32px,5vw,64px);top:50%;width:160px;height:160px;transform:translateY(-50%) rotate(-4deg) scale(.85);opacity:0;transition:opacity .35s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.16,1,.3,1);pointer-events:none;z-index:2;display:flex;align-items:center;justify-content:center;font-size:40px}.hni.s{opacity:1;transform:translateY(-50%) rotate(-4deg) scale(1)}
+.hn-link{color:var(--fg);text-decoration:none;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s,color .3s}.hn-link:hover{border-color:var(--tl);color:var(--tl)}
+.hni{position:absolute;right:clamp(32px,5vw,64px);bottom:80px;width:140px;height:140px;opacity:0;transition:opacity .2s ease;pointer-events:none;z-index:2}.hni.s{opacity:1}
+.hni img{width:100%;height:100%;object-fit:contain;display:block;background:none;box-shadow:none}
 
 
 
@@ -196,9 +197,9 @@ export default function Page(){
 .bpdv{position:relative;height:.5px;background:var(--bd);margin-bottom:clamp(28px,4vw,40px)}.bpbd{max-width:640px;margin-bottom:clamp(48px,6vw,72px)}.bppr{font-size:15px;color:var(--f2);line-height:1.8;margin-bottom:24px}.bppr:last-child{margin-bottom:0}
 .bpn{border-top:.5px solid var(--bd);padding-top:32px;cursor:pointer;position:relative}.bpnl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--f4);margin-bottom:8px;font-weight:500}.bpnt{font-size:clamp(17px,2.5vw,24px);font-weight:500;color:var(--f3);line-height:1.35;transition:color .3s;display:inline-flex;align-items:center;gap:10px;max-width:560px}.bpn:hover .bpnt{color:var(--fg)}.bpna{transition:transform .3s cubic-bezier(.16,1,.3,1);display:inline-block;font-size:.8em;flex-shrink:0}.bpn:hover .bpna{transform:translateX(5px)}
 .ft2{display:flex;align-items:center;justify-content:space-between;padding-top:16px;padding-bottom:16px;border-top:.5px solid var(--bd)}.ftx{font-size:11px;color:var(--f4)}.ftl{font-size:12px;color:var(--f3);text-decoration:none;cursor:pointer;transition:color .2s}.ftl:hover{color:var(--tl)}
-@media(max-width:1024px){.htxt{max-width:70%}.tgr{display:none}.hr{height:auto;min-height:auto;overflow:visible;padding:clamp(16px,3.2vw,32px)}.hr-bot{padding:0;min-height:auto;height:auto;position:static}}
-@media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.hni{width:100px;right:16px}.tgr{gap:3px}}
-@media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.hni{position:relative;right:auto;top:auto;width:80px;height:80px;transform:rotate(-3deg) scale(1);opacity:1;margin:16px 0 8px}.hni.s{transform:rotate(-3deg) scale(1)}.tgr{gap:2px}}
+@media(max-width:1024px){.htxt{max-width:70%}.tgr{display:none}.hr{height:auto;min-height:auto;overflow:visible;padding:clamp(16px,3.2vw,32px)}.hr-bot{padding:0;min-height:auto;height:auto;position:static}.hni{display:none}.hn{border-bottom:none;padding-bottom:0}}
+@media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}}
+@media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}}
       `}</style>
       <nav className="fn" style={{animation:m?"fi .5s .4s both":"none"}} onMouseLeave={off}>
         <div className={`fp${ne?" o":""}`}><div className="fpi"><div className="fpc">
@@ -227,15 +228,15 @@ export default function Page(){
               </div>
               <div className="htxt">
                 {TABS.map((t,i)=><div key={i} className={`htxt-item${htab===i?" show":" hide"}`}>
-                  <p>{i===0?<>I'm <span className="hn" onMouseEnter={()=>setNh(true)} onMouseLeave={()=>setNh(false)}>Akash Trivedi</span>, a Product Designer focused on B2B SaaS, IoT platforms, and AI-driven UX. I create digital products that simplify complexity, improve usability, and bring clarity to enterprise experiences.</>:t.t}</p>
+                  <p>{i===0?<><span className="hn" onMouseEnter={()=>setNh(true)} onMouseLeave={()=>setNh(false)}>Akash Trivedi</span> is a Product Designer at <a href="https://cybus.io" target="_blank" rel="noopener noreferrer" className="hn-link">Cybus</a>, focused on B2B SaaS, IoT platforms, and AI-driven UX. I create digital products that simplify complexity, improve usability, and bring clarity to enterprise experiences.</>:t.t}</p>
                 </div>)}
               </div>
-              <div className={`hni${nh?" s":""}`}>👋</div>
+              <div className={`hni${nh?" s":""}`}><img src="/videos/hover-face.gif" alt="Akash Trivedi" width={140} height={140}/></div>
             </div>
           </section>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
           <div className="pg pd">{P.map(p=><div key={p.id} className="pe" onClick={()=>nav("project",p)}><div className="pc" style={{background:p.c}}>{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}</div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div></div>)}</div>
-          <div className="ft2 pd"><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl">LinkedIn</a><a className="ftl">Instagram</a><a className="ftl">Are.na</a></div></div>
+          <div className="ft2 pd"><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
         </>}
         {pg==="project"&&proj&&(()=>{const i=P.findIndex(p=>p.id===proj.id);const nx=P[(i+1)%P.length];return<div className="pp pd">
           <button className="pb" onClick={()=>nav("home")}><span className="pba">←</span> All projects</button>
@@ -255,13 +256,13 @@ export default function Page(){
           <div className="cvs"><div className="cvsl">Education</div>{EDU.map((e,i)=><div key={i} className="cve"><div className="cvep">{e.p}</div><div><div className="cver">{e.ti}</div><div className="cvec">{e.ins}, {e.lo}</div>{e.d&&<div className="cved">{e.d}</div>}</div></div>)}</div>
           <div className="cvsk"><div className="cvsl">Skills & Knowledge</div><div className="cvsg">{SK.map((s,i)=><div key={i}><div className="cvskc">{s.c}</div>{s.items.map((it,j)=><div key={j} className="cvski">{it}</div>)}</div>)}</div></div>
           <div className="cva"><a className="cvdl">↓ Download PDF</a><a className="cvcb">✉ Get in touch</a></div>
-          <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl">LinkedIn</a><a className="ftl">Instagram</a><a className="ftl">Are.na</a></div></div>
+          <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
         </div>}
         {pg==="blog"&&<div className="blp pd">
           <button className="pb" onClick={()=>nav("home")}><span className="pba">←</span> Home</button>
           <h1 className="blt">Blog</h1><p className="bls">Thinking out loud about design systems, industrial software, and the space between tools and people.</p>
           <div className="bll">{BL.map(p=><div key={p.id} className="ble" onClick={()=>nav("blogPost",null,p)}><div className="blel"><div className="blet">{p.ti}</div><div className="bleg">{p.tg.map(t=><span key={t} className="blegt">{t}</span>)}</div></div><div className="bler"><span className="bled">{p.dt}</span><span className="blerm">{p.rt}</span></div></div>)}</div>
-          <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl">LinkedIn</a><a className="ftl">Instagram</a><a className="ftl">Are.na</a></div></div>
+          <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
         </div>}
         {pg==="blogPost"&&bp&&(()=>{const i=BL.findIndex(p=>p.id===bp.id);const nx=BL[(i+1)%BL.length];return<div className="bpp pd">
           <button className="pb" onClick={()=>nav("blog")}><span className="pba">←</span> All posts</button>
@@ -269,7 +270,7 @@ export default function Page(){
           <div className="bpdv"><V top={0} left={0}/><V top={0} right={0}/></div>
           <div className="bpbd">{bp.bd.split("\n\n").map((p,i)=><p key={i} className="bppr">{p}</p>)}</div>
           <div className="bpn" onClick={()=>nav("blogPost",null,nx)}><V top={0} left={0}/><V top={0} right={0}/><div className="bpnl">Next post</div><div className="bpnt">{nx.ti}<span className="bpna">→</span></div></div>
-          <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl">LinkedIn</a><a className="ftl">Instagram</a><a className="ftl">Are.na</a></div></div>
+          <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
         </div>})()}
       </div>
     </div>
