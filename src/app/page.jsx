@@ -131,6 +131,8 @@ function ScaledIframe({src,title}){
 function V({top,left,right,bottom}){return <div style={{position:"absolute",width:5,height:5,background:"var(--bg)",border:"0.5px solid var(--vertex)",...(top!=null?{top:top-2.5}:{}),...(bottom!=null?{bottom:bottom-2.5}:{}),...(left!=null?{left:left-2.5}:{}),...(right!=null?{right:right-2.5}:{}),zIndex:10,pointerEvents:"none"}}/>}
 export default function Page(){
   const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false);
+  const mousePos=useRef({x:0,y:0}),gifPos=useRef({x:0,y:0}),gifRef=useRef(null),rafRef=useRef(null);
+  useEffect(()=>{const onMove=(e)=>{mousePos.current={x:e.clientX,y:e.clientY}};window.addEventListener("mousemove",onMove);const animate=()=>{const gp=gifPos.current,mp=mousePos.current;gp.x+=(mp.x-gp.x)*0.08;gp.y+=(mp.y-gp.y)*0.08;if(gifRef.current){gifRef.current.style.transform=`translate3d(${gp.x-70}px,${gp.y-70}px,0)`}rafRef.current=requestAnimationFrame(animate)};rafRef.current=requestAnimationFrame(animate);return()=>{window.removeEventListener("mousemove",onMove);cancelAnimationFrame(rafRef.current)}},[]);
   const hex2rgb=(h)=>{const v=parseInt(h.slice(1),16);return[(v>>16)&255,(v>>8)&255,v&255]};
   const rgb2hex=(r,g,b)=>"#"+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,"0")).join("");
   const lerp=(a,b,t)=>a+(b-a)*t;
@@ -227,6 +229,7 @@ export default function Page(){
   useEffect(()=>{if(!tg)return;const spawn=()=>{let r,c,tries=0;do{r=Math.floor(Math.random()*GR);c=Math.floor(Math.random()*GC);tries++}while((nameMap[r]?.[c]||tg[r]?.[c])&&tries<20);if(tries>=20)return;setTg(prev=>{if(!prev)return prev;const n=prev.map(rw=>[...rw]);if(n[r])n[r][c]=1;return n});const dur=2000+Math.random()*3000;setTimeout(()=>{setTg(prev=>{if(!prev)return prev;const n=prev.map(rw=>[...rw]);if(n[r])n[r][c]=0;return n})},dur)};const iv=setInterval(spawn,700);return()=>clearInterval(iv)},[tg!==null,nameMap,GR,GC]);
   return(
     <div className={`r${isLight?" light":""}`} style={{"--bg":cp.bg,"--fg":cp.fg,"--f2":cp.f2,"--f3":cp.f3,"--f4":cp.f4,"--tl":cp.tl,"--cd":cp.cd,"--bd":cp.bd,"--hg":cp.hg,"--nb":cp.nb,"--hb":cp.hb,"--la":cp.la,"--ht":cp.ht,"--vertex":cp.vt,"--tb":cp.tb,"--thb":cp.thb}}>
+      <div ref={gifRef} className={`hni${nh?" s":""}`}><img src="/videos/hover-face.gif" alt="Akash Trivedi" width={140} height={140}/></div>
       <style>{`
 
 .r{min-height:100vh;background:var(--bg);color:var(--fg);font-family:'Geist',sans-serif;overflow-x:hidden}
@@ -281,8 +284,8 @@ export default function Page(){
 .htxt-item p{font-size:clamp(18px,2.5vw,24px);font-weight:400;color:var(--fg);line-height:1.45;letter-spacing:-.015em;margin:0}
 .hn{font-weight:500;position:relative;display:inline;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s;cursor:default}.hn:hover{border-color:var(--fg)}
 .hn-link{color:var(--fg);text-decoration:none;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s,color .3s}.hn-link:hover{border-color:var(--tl);color:var(--tl)}
-.hni{position:absolute;right:clamp(80px,10vw,140px);bottom:80px;width:140px;height:140px;opacity:0;transition:opacity .2s ease;pointer-events:none;z-index:2}.hni.s{opacity:1}
-.hni img{width:100%;height:100%;object-fit:contain;display:block;background:none;box-shadow:none}
+.hni{position:fixed;top:0;left:0;width:140px;height:140px;opacity:0;pointer-events:none;z-index:9999;transition:opacity .25s ease,transform .05s;will-change:transform,opacity}.hni.s{opacity:1}
+.hni img{width:100%;height:100%;object-fit:contain;display:block;border-radius:50%;box-shadow:0 8px 32px rgba(0,0,0,0.25),0 2px 8px rgba(0,0,0,0.15);background:var(--bg)}
 
 
 
@@ -359,7 +362,6 @@ export default function Page(){
                   <p>{i===0?<>I'm <span className="hn" onMouseEnter={()=>setNh(true)} onMouseLeave={()=>setNh(false)}>Akash Trivedi</span>, a Product Designer at <a href="https://cybus.io" target="_blank" rel="noopener noreferrer" className="hn-link">Cybus</a>, where I get to work on some genuinely interesting problems in industrial IoT. My days are spent making complex B2B tools feel straightforward — and more recently, figuring out what good AI-driven UX actually looks like in practice.</>:t.t}</p>
                 </div>)}
               </div>
-              <div className={`hni${nh?" s":""}`}><img src="/videos/hover-face.gif" alt="Akash Trivedi" width={140} height={140}/></div>
             </div>
           </section>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
