@@ -281,7 +281,7 @@ export default function Page(){
 .htxt-item p{font-size:clamp(18px,2.5vw,24px);font-weight:400;color:var(--fg);line-height:1.45;letter-spacing:-.015em;margin:0}
 .hn{font-weight:500;position:relative;display:inline;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s;cursor:default}.hn:hover{border-color:var(--fg)}
 .hn-link{color:var(--fg);text-decoration:none;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s,color .3s}.hn-link:hover{border-color:var(--tl);color:var(--tl)}
-.hni{position:absolute;right:clamp(32px,5vw,64px);bottom:80px;width:140px;height:140px;opacity:0;transition:opacity .2s ease;pointer-events:none;z-index:2}.hni.s{opacity:1}
+.hni{position:absolute;right:clamp(80px,10vw,140px);bottom:80px;width:140px;height:140px;opacity:0;transition:opacity .2s ease;pointer-events:none;z-index:2}.hni.s{opacity:1}
 .hni img{width:100%;height:100%;object-fit:contain;display:block;background:none;box-shadow:none}
 
 
