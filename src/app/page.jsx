@@ -2,30 +2,116 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 const CDS_COMP="/comparisons/cds/index.html";
 const CPE_COMP="/comparisons/cpe/index.html";
+
+/* ========================================================================
+   PROJECTS
+   =========================================================================
+   To ADD a new project: Copy one of the blocks below and paste it at the
+   end (before the closing bracket "]"). Change the values to match your
+   new project. Don't forget the comma after each "}" !
+
+   To DELETE a project: Remove the entire block from "{" to "}," for that
+   project.
+
+   To EDIT a project: Just change the text values you want to update.
+
+   Each project has these fields:
+     id    — Short unique ID, no spaces (e.g. "myproject")
+     comp  — (Optional) Path to a comparison HTML page in /public/comparisons/
+     img   — Path to overview image in /public/projects/ (e.g. "/projects/my-overview.png")
+     n     — Full project name shown on the project detail page
+     co    — Company / context label shown below the card
+     tl2   — One-line subtitle
+     d     — Short description (shown on cards)
+     ld    — Long description for the detail page. Use \n\n for new paragraphs.
+     t     — Tags array, e.g. ["Design Systems", "Research"]
+     tools — Tools array, e.g. ["Figma", "Miro"]
+     y     — Year or year range, e.g. "2024–25"
+     r     — Your role, e.g. "Lead Product Designer"
+     c     — Card background color hex, e.g. "#1a1a1a"
+   ======================================================================== */
 const P = [
   { id:"cds",comp:CDS_COMP,img:"/projects/cds-overview.png",n:"Connectware Design System",co:"Connectware Design System",tl2:"Scaling design language for industrial IoT",d:"At Cybus, there was no shared design language when I joined. I got to build one from scratch — tokens, components, documentation, the whole thing.",ld:"Connectware had no design system. Every team was solving the same problems differently, so I started from first principles — type scale, spacing, color tokens, and a component library with APIs that actually make sense to developers.\n\nThe part I'm proudest of: every component has a 'context of use' section. Not just how it looks, but when you should reach for it and what breaks in production if you misuse it. Adoption went from around 40% to near-complete in two quarters. That felt good.",t:["Design Systems","Documentation"],tools:["Figma","Storybook","Notion"],y:"2024–25",r:"Design System Lead",c:"#1a1a1a" },
   { id:"cpe",comp:CPE_COMP,img:"/projects/cpe-overview.png",n:"Connectware Product Experience",co:"Connectware Product Experience",tl2:"Reshaping how industries manage IoT infrastructure",d:"I own the product design for Connectware — how industrial users monitor, configure, and manage their IoT infrastructure day to day.",ld:"When I picked this up, the interface had grown organically over three years. Lots of capable pieces, but no coherent thread tying them together. I started with contextual interviews on actual factory floors and talked to people across 12 client organizations.\n\nThe redesign brought device status, data flows, and configuration into one experience — with progressive disclosure so both plant engineers and IT admins feel at home. It's the kind of problem I really enjoy working on at Cybus.",t:["Product Design","Research"],tools:["Figma","Dovetail","Miro"],y:"2024–25",r:"Lead Product Designer",c:"#1a1a1a" },
   { id:"sds",img:"/projects/sds-overview.png",n:"Shyftplan Design System",co:"Shyftplan Design System",tl2:"Consistency across a fast-scaling workforce platform",d:"Shyftplan was shipping features fast, but the UI was drifting. I introduced a design system to bring it back together.",ld:"New features shipped weekly but patterns were diverging — buttons looked different on every page, spacing was inconsistent, and accessibility was an afterthought. I set up a structured system with foundational tokens, reusable components, and documentation people actually referred to.\n\nI worked closely with engineering to get WCAG 2.1 AA compliance across the board. Over time the system became the shared language between design and dev, which made everything move faster.",t:["Design Systems","Accessibility"],tools:["Figma","Storybook"],y:"2023–24",r:"UI/UX Designer",c:"#333336" },
   { id:"qm",img:"/projects/qm-overview.png",n:"Qualification Matrix",co:"Shyftplan Qualification Matrix",tl2:"Data-dense interface for workforce skill management",d:"A dense data problem — tracking employee qualifications, skills, and certifications so shift planners can actually see what they're working with.",ld:"In regulated industries, you can't just put anyone on any shift. Managers need to track qualifications, certifications, expiry dates — and they need to see all of it at once without drowning in it.\n\nI designed a matrix view that gives you skill coverage across teams at a glance. Progressive disclosure handles the details, and inline editing means you're not jumping between screens constantly. We validated it with operations managers, and the feedback was pretty clear — they'd been wanting something like this for a while.",t:["Product Design","Data Visualization"],tools:["Figma","Maze"],y:"2023",r:"UI/UX Designer",c:"#343434" },
+  /* ADD NEW PROJECT HERE (copy a block above and paste it here) */
 ];
+/* ========================================================================
+   EXPERIENCE (CV page)
+   =========================================================================
+   To ADD: Copy a block and paste it in the right chronological position.
+   To DELETE: Remove the entire { ... }, block for that job.
+   To EDIT: Change the text values.
+
+   Fields:
+     p   — Period (e.g. "07/2024 — Present")
+     ti  — Job title
+     co  — Company name
+     lo  — Location
+     d   — Short description of the role
+   ======================================================================== */
 const EXP = [
   {p:"07/2024 — Present",ti:"Product Designer",co:"Cybus",lo:"Bremen",d:"Lead product design for Connectware, an industrial IoT platform. Design systems, discovery, interaction design."},
   {p:"04/2023 — 06/2024",ti:"UI/UX Designer",co:"shyftplan GmbH",lo:"Berlin",d:"Full cycle product design for AI-supported shift planning. UX, prototyping, WCAG 2.1 AA compliance."},
   {p:"09/2021 — 04/2023",ti:"Web Designer & Developer",co:"collectAI",lo:"Hamburg",d:"UI design for fintech. Responsive communications, landing pages, agile design system development."},
   {p:"07/2019 — 09/2021",ti:"UI Designer",co:"BIBA",lo:"Bremen",d:"UX/UI for web and mobile apps. User-centric methods, usability testing, branding."},
   {p:"01/2016 — 08/2018",ti:"Experience Designer",co:"St+Art India Foundation",lo:"New Delhi",d:"Digital experiences for Street Art Festival. Field research, content documentation."},
+  /* ADD NEW EXPERIENCE HERE */
 ];
+/* ========================================================================
+   EDUCATION (CV page)
+   =========================================================================
+   To ADD: Copy a block and paste it in the right position.
+   To DELETE: Remove the { ... }, block. To EDIT: Change the text values.
+
+   Fields:
+     p   — Period (e.g. "2018 — 2024")
+     ti  — Degree name
+     ins — Institution name
+     lo  — Location
+     d   — Extra info like grade (leave "" if empty)
+   ======================================================================== */
 const EDU = [
   {p:"2018 — 2024",ti:"M.Sc. Media Informatics",ins:"University of Bremen",lo:"Bremen",d:"Grade: 1.5"},
   {p:"2010 — 2014",ti:"B.Sc. Computer Science",ins:"Ganpat University",lo:"Gujarat, India",d:""},
+  /* ADD NEW EDUCATION HERE */
 ];
+/* ========================================================================
+   SKILLS (CV page)
+   =========================================================================
+   To ADD a skill: Add a new text string inside the "items" list of the
+   right category. e.g. items:["Figma","FigJam","NEW TOOL HERE"]
+   To ADD a category: Copy a whole { c:"...", items:[...] }, block.
+   To DELETE: Remove the text from the items list, or remove a whole block.
+   ======================================================================== */
 const SK = [
   {c:"UX / Product",items:["User Research","Journey Mapping","Interaction Design","Prototyping","Usability Testing","KPI-Aware Decisions"]},
   {c:"Systems & Scale",items:["Design Systems","Component Libraries","Design Tokens","Info Architecture","Design Ops"]},
   {c:"AI-Augmented",items:["GenAI Ideation","Research Synthesis with AI","Human-AI Workflow","Responsible AI UX"]},
   {c:"Tools",items:["Figma","FigJam","Storybook","Framer","Notion","Jira","Dovetail","Claude, Cursor"]},
+  /* ADD NEW SKILL CATEGORY HERE */
 ];
+/* ========================================================================
+   BLOG POSTS
+   =========================================================================
+   To ADD a new blog post: Copy one block and paste it at the TOP of the
+   list (newest posts go first). Update the id to be unique (e.g. "b6").
+
+   To DELETE a blog post: Remove the entire { ... }, block for that post.
+
+   To EDIT a blog post: Change the text values directly.
+
+   Fields:
+     id  — Unique ID, e.g. "b6", "b7" (just keep incrementing)
+     ti  — Blog post title
+     dt  — Date shown, e.g. "Apr 2025"
+     tg  — Tags array, e.g. ["UX", "AI"]
+     rt  — Reading time, e.g. "5 min"
+     bd  — Full blog post body text. Use \n\n for new paragraphs.
+   ======================================================================== */
 const BL = [
+  /* ADD NEW BLOG POST HERE (newest first) */
   {id:"b1",ti:"What I learned building a design system for industrial software",dt:"Mar 2025",tg:["Design Systems"],rt:"6 min",bd:"When I started rebuilding the design system at Cybus, I assumed the hard part would be the components. I was wrong.\n\nThe hard part was governance. The biggest lesson: a design system isn't a library. It's a set of shared decisions."},
   {id:"b2",ti:"Progressive disclosure in complex tools",dt:"Jan 2025",tg:["UX","Interaction"],rt:"5 min",bd:"The more capable a tool is, the harder it is to use — unless you actively hide most of its capability.\n\nAt Cybus, we redesigned machine onboarding using layered progressive disclosure. Commissioning dropped from 45 to under 10 minutes."},
   {id:"b3",ti:"Everyone cares about good UX — it's just not always the priority",dt:"Nov 2024",tg:["UX","AI"],rt:"6 min",bd:"Nobody says they don't care about UX. But when shipping pressure hits, it's the first thing that gets negotiated away.\n\nI've been thinking about what it actually takes to keep UX on the table when AI features are moving fast and everyone wants to ship yesterday."},
@@ -61,12 +147,25 @@ export default function Page(){
   ];
   const interpPal=(v)=>{let lo=ANCH[0],hi=ANCH[ANCH.length-1];for(let i=0;i<ANCH.length-1;i++){if(v>=ANCH[i].p&&v<=ANCH[i+1].p){lo=ANCH[i];hi=ANCH[i+1];break}}const t=hi.p===lo.p?0:(v-lo.p)/(hi.p-lo.p);const l=(k)=>lerpHex(lo[k],hi[k],t);const bg=l("bg"),fg=l("fg");const lum=(parseInt(bg.slice(1,3),16)*299+parseInt(bg.slice(3,5),16)*587+parseInt(bg.slice(5,7),16)*114)/1000;return{bg,fg,f2:l("f2"),f3:l("f3"),f4:l("f4"),tl:l("tl"),cd:l("cd"),hg:l("hg"),isLight:lum>140,bd:lum>140?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.08)",nb:lum>140?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.12)",hb:lum>140?"rgba(0,0,0,0.04)":"rgba(255,255,255,0.05)",la:lum>140?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.08)",ht:lum>140?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.1)",vt:lum>140?"rgba(0,0,0,0.15)":"rgba(255,255,255,0.2)",tb:lum>140?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.1)",thb:lum>140?"rgba(0,0,0,0.12)":"rgba(255,255,255,0.15)"}};
   const cp=interpPal(sv);const isLight=cp.isLight;
+  /* ======================================================================
+     HOMEPAGE INTRO TABS
+     ======================================================================
+     These are the tabs at the bottom of the landing hero section.
+     NOTE: The FIRST tab ("For anyone") text is hardcoded separately in the
+     JSX below (search for "I'm <span className="hn"" to edit it).
+     For all OTHER tabs, just edit the "t" text here.
+
+     To ADD a tab: Add a new { l:"Tab Name", t:"Tab text..." },
+     To DELETE a tab: Remove the entire { ... }, block.
+     To EDIT: Change the "l" (label) or "t" (text) values.
+     ====================================================================== */
   const TABS=[
     {l:"For anyone",t:"I'm a Product Designer at Cybus, where I get to work on some genuinely interesting problems in industrial IoT. My days are spent making complex B2B tools feel straightforward — and more recently, figuring out what good AI-driven UX actually looks like in practice."},
     {l:"Product & Systems",t:"I spend most of my time in the messy middle — talking to users, untangling requirements, and turning that into systems and interfaces that hold up at scale. I care about the structure behind what people see, not just the surface."},
     {l:"Pro Bono",t:"I'm open to volunteering my design skills for products in the health and mental health space. If you're building something that supports wellbeing and could use a product designer, I'd love to contribute."},
     {l:"Culture",t:"Much of my creative inspiration comes from the visual language of everyday life — streets, signs, letterforms, walls, and movement. I'm particularly drawn to street photography, typography, and graffiti culture."},
     {l:"Motion",t:"When I'm away from the screen, I'm usually riding through unfamiliar places, going for a run, or trying to stay honest with a daily sun salutation practice."},
+    /* ADD NEW TAB HERE */
   ];
   const switchTab=(i)=>{setHtab(i)};
   const tr=useRef(null),tbr=useRef(null),[ind,setInd]=useState({x:0,w:0});
@@ -82,6 +181,19 @@ export default function Page(){
   const sp=()=>{if(pg!=="home"){nav("home");return}document.getElementById("projects")?.scrollIntoView({behavior:"smooth"})};
   const np=()=>{if(!proj)return;const i=P.findIndex(p=>p.id===proj.id);nav("project",P[(i+1)%P.length])};
   const GF={A:[2,5,7,5,5],B:[6,5,6,5,6],C:[3,4,4,4,3],D:[6,5,5,5,6],E:[7,4,7,4,7],G:[3,4,5,5,3],H:[5,5,7,5,5],I:[7,2,2,2,7],J:[1,1,1,5,2],K:[5,6,4,6,5],L:[4,4,4,4,7],M:[5,7,7,5,5],N:[5,7,5,5,5],P:[6,5,6,4,4],R:[6,5,6,5,5],S:[3,4,2,1,6],T:[7,2,2,2,2],U:[5,5,5,5,7],V:[5,5,5,2,2],Y:[5,5,2,2,2]};
+  /* ======================================================================
+     HERO GRID PHRASES (the rotating text in the dot grid)
+     ======================================================================
+     These cycle every 5 seconds in the interactive grid on the homepage.
+     Each phrase is an array of lines. One line = [["WORD"]], two lines =
+     [["LINE ONE"],["LINE TWO"]].
+
+     IMPORTANT: Only UPPERCASE letters work, and only these characters are
+     supported: A B C D E G H I J K L M N P R S T U V Y and SPACE.
+
+     To ADD: Add a new line like [["YOUR"],["WORD"]],
+     To DELETE: Remove the line. To EDIT: Change the text.
+     ====================================================================== */
   const PHRASES=[
     [["AKASH"],["TRIVEDI"]],
     [["BRD"]],
@@ -94,6 +206,7 @@ export default function Page(){
     [["RAKHHAD"],["PATTI"]],
     [["TRAPAT"]],
     [["JEEVAN NI"],["MAALIPA"]],
+    /* ADD NEW PHRASE HERE */
   ];
   const [phi,setPhi]=useState(0);
   useEffect(()=>{const iv=setInterval(()=>{setPhi(p=>{let n;do{n=Math.floor(Math.random()*PHRASES.length)}while(n===p);return n})},5000);return()=>clearInterval(iv)},[]);
@@ -251,6 +364,18 @@ export default function Page(){
           </section>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
           <div className="pg pd">{P.map(p=><div key={p.id} className="pe"><div className="pc" style={{background:p.c}}>{p.img&&<img className="pci" src={p.img} alt={p.n}/>}{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{!p.img&&p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}<div className="wip-ov"><div className="wip-anim"><div className="wip-ring"/><div className="wip-ring wip-r2"/><div className="wip-ring wip-r3"/><div className="wip-dot"/></div><div className="wip-label">Work in progress</div><p className="wip-sub">Case study coming soon.<br/>Available via <strong>Loom</strong> or <strong>Google Meet</strong>.</p><a className="wip-cta" href="mailto:akashtrivedi30@gmail.com?subject=Case%20Study%20Walkthrough%20Request" onClick={e=>e.stopPropagation()}>Send me an email →</a></div></div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div></div>)}</div>
+          {/* ================================================================
+              FOOTER — This footer appears on multiple pages. To update
+              your links or copyright, search for "ft2" in this file and
+              update ALL instances (there are 4 total: home, CV, blog
+              list, and blog post pages).
+
+              To ADD a link: Copy one of the <a> tags and change the
+              href and text.
+              To EDIT: Change the URL in href="..." and the link text.
+              To change email: Search for "akashtrivedi30@gmail.com"
+              in this file and update all instances.
+              ============================================================ */}
           <div className="ft2 pd"><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
         </>}
         {pg==="project"&&proj&&(()=>{const i=P.findIndex(p=>p.id===proj.id);const nx=P[(i+1)%P.length];return<div className="pp pd">
@@ -275,6 +400,7 @@ export default function Page(){
         </div>}
         {pg==="blog"&&<div className="blp pd">
           <button className="pb" onClick={()=>nav("home")}><span className="pba">←</span> Home</button>
+          {/* EDIT BLOG PAGE HEADING AND SUBTITLE BELOW */}
           <h1 className="blt">Blog</h1><p className="bls">Thinking out loud about design systems, industrial software, and the space between tools and people.</p>
           <div className="bll">{BL.map(p=><div key={p.id} className="ble" onClick={()=>nav("blogPost",null,p)}><div className="blel"><div className="blet">{p.ti}</div><div className="bleg">{p.tg.map(t=><span key={t} className="blegt">{t}</span>)}</div></div><div className="bler"><span className="bled">{p.dt}</span><span className="blerm">{p.rt}</span></div></div>)}</div>
           <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
