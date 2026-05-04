@@ -54,11 +54,11 @@ const P = [
      d   — Short description of the role
    ======================================================================== */
 const EXP = [
-  {p:"07/2024 — Present",ti:"Product Designer",co:"Cybus",lo:"Bremen",d:"Lead product design for Connectware, an industrial IoT platform. Design systems, discovery, interaction design."},
-  {p:"04/2023 — 06/2024",ti:"UI/UX Designer",co:"shyftplan GmbH",lo:"Berlin",d:"Full cycle product design for AI-supported shift planning. UX, prototyping, WCAG 2.1 AA compliance."},
+  {p:"07/2024 — Present",ti:"Product Designer",co:"Cybus",lo:"Hamburg",d:"Lead product design for Connectware, an industrial IoT platform. Leveraging agentic AI tools and LLM-assisted workflows to accelerate discovery, research synthesis, and design system development. Interaction design, prototyping, and design ops."},
+  {p:"04/2023 — 06/2024",ti:"UI/UX Designer",co:"shyftplan GmbH",lo:"Berlin",d:"Full cycle product design for AI-supported shift planning. Used AI-augmented research and generative prototyping to speed up design iterations. UX, usability testing, WCAG 2.1 AA compliance."},
   {p:"09/2021 — 04/2023",ti:"Web Designer & Developer",co:"collectAI",lo:"Hamburg",d:"UI design for fintech. Responsive communications, landing pages, agile design system development."},
   {p:"07/2019 — 09/2021",ti:"UI Designer",co:"BIBA",lo:"Bremen",d:"UX/UI for web and mobile apps. User-centric methods, usability testing, branding."},
-  {p:"01/2016 — 08/2018",ti:"Experience Designer",co:"St+Art India Foundation",lo:"New Delhi",d:"Digital experiences for Street Art Festival. Field research, content documentation."},
+  {p:"01/2016 — 08/2018",ti:"Experience Designer",co:"St+Art India Foundation",lo:"New Delhi",d:"Digital experiences for India's largest Street Art Festival. Field research, content documentation, and interactive storytelling."},
   /* ADD NEW EXPERIENCE HERE */
 ];
 /* ========================================================================
@@ -90,7 +90,7 @@ const EDU = [
 const SK = [
   {c:"UX / Product",items:["User Research","Journey Mapping","Interaction Design","Prototyping","Usability Testing","KPI-Aware Decisions"]},
   {c:"Systems & Scale",items:["Design Systems","Component Libraries","Design Tokens","Info Architecture","Design Ops"]},
-  {c:"AI-Augmented",items:["GenAI Ideation","Research Synthesis with AI","Human-AI Workflow","Responsible AI UX"]},
+  {c:"AI & Agentic UX",items:["Agentic AI Workflows","Human-in-the-Loop Design","Prompt UX & LLM Interfaces","Conversational UI","AI Copilot Patterns","Responsible AI UX","GenAI Ideation","AI-Assisted Research Synthesis"]},
   {c:"Tools",items:["Figma","FigJam","Storybook","Framer","Notion","Jira","Dovetail","Claude, Cursor"]},
   /* ADD NEW SKILL CATEGORY HERE */
 ];
