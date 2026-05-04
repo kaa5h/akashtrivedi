@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 const CDS_COMP="/comparisons/cds/index.html";
 const CPE_COMP="/comparisons/cpe/index.html";
+/* Get your free key at web3forms.com (enter your email → copy the key) */
+const W3F_KEY="b319f9e4-4fd2-4272-a8c6-f5a5712e25fb";
 
 /* ========================================================================
    PROJECTS
@@ -131,6 +133,7 @@ function ScaledIframe({src,title}){
 function V({top,left,right,bottom}){return <div style={{position:"absolute",width:5,height:5,background:"var(--bg)",border:"0.5px solid var(--vertex)",...(top!=null?{top:top-2.5}:{}),...(bottom!=null?{bottom:bottom-2.5}:{}),...(left!=null?{left:left-2.5}:{}),...(right!=null?{right:right-2.5}:{}),zIndex:10,pointerEvents:"none"}}/>}
 export default function Page(){
   const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false);
+  const [reqProj,setReqProj]=useState(null),[reqForm,setReqForm]=useState({name:"",email:"",company:""}),[reqStatus,setReqStatus]=useState("idle");
   const mousePos=useRef({x:0,y:0}),gifPos=useRef({x:0,y:0}),gifRef=useRef(null),rafRef=useRef(null);
   useEffect(()=>{const onMove=(e)=>{mousePos.current={x:e.clientX,y:e.clientY}};window.addEventListener("mousemove",onMove);const animate=()=>{const gp=gifPos.current,mp=mousePos.current;gp.x+=(mp.x-gp.x)*0.08;gp.y+=(mp.y-gp.y)*0.08;if(gifRef.current){gifRef.current.style.transform=`translate3d(${gp.x-70}px,${gp.y-70}px,0)`}rafRef.current=requestAnimationFrame(animate)};rafRef.current=requestAnimationFrame(animate);return()=>{window.removeEventListener("mousemove",onMove);cancelAnimationFrame(rafRef.current)}},[]);
   const hex2rgb=(h)=>{const v=parseInt(h.slice(1),16);return[(v>>16)&255,(v>>8)&255,v&255]};
@@ -182,6 +185,9 @@ export default function Page(){
   useEffect(()=>{window.history.replaceState({pg:"home",proj:null,bp:null},"");const onPop=(e)=>{const s=e.state;if(s){const p=s.proj?P.find(x=>x.id===s.proj):null;const b=s.bp?BL.find(x=>x.id===s.bp):null;nav(s.pg,p,b,true)}else{nav("home",null,null,true)}};window.addEventListener("popstate",onPop);return()=>window.removeEventListener("popstate",onPop)},[]);
   const sp=()=>{if(pg!=="home"){nav("home");return}document.getElementById("projects")?.scrollIntoView({behavior:"smooth"})};
   const np=()=>{if(!proj)return;const i=P.findIndex(p=>p.id===proj.id);nav("project",P[(i+1)%P.length])};
+  const closeReq=()=>{setReqProj(null);setReqStatus("idle");setReqForm({name:"",email:"",company:""})};
+  const submitReq=async(e)=>{e.preventDefault();setReqStatus("sending");try{const res=await fetch("https://api.web3forms.com/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_key:W3F_KEY,subject:`Case Study Request: ${reqProj.n}`,from_name:reqForm.name,email:reqForm.email,company:reqForm.company||"Not provided",project:reqProj.n,message:`${reqForm.name} (${reqForm.email})${reqForm.company?` from ${reqForm.company}`:""} requested access to the "${reqProj.n}" case study.`})});if(res.ok)setReqStatus("sent");else setReqStatus("error")}catch{setReqStatus("error")}};
+  useEffect(()=>{if(!reqProj)return;const onKey=(e)=>{if(e.key==="Escape")closeReq()};document.addEventListener("keydown",onKey);document.body.style.overflow="hidden";return()=>{document.removeEventListener("keydown",onKey);document.body.style.overflow=""}},[reqProj]);
   const GF={A:[2,5,7,5,5],B:[6,5,6,5,6],C:[3,4,4,4,3],D:[6,5,5,5,6],E:[7,4,7,4,7],G:[3,4,5,5,3],H:[5,5,7,5,5],I:[7,2,2,2,7],J:[1,1,1,5,2],K:[5,6,4,6,5],L:[4,4,4,4,7],M:[5,7,7,5,5],N:[5,7,5,5,5],P:[6,5,6,4,4],R:[6,5,6,5,5],S:[3,4,2,1,6],T:[7,2,2,2,2],U:[5,5,5,5,7],V:[5,5,5,2,2],Y:[5,5,2,2,2]};
   /* ======================================================================
      HERO GRID PHRASES (the rotating text in the dot grid)
@@ -299,19 +305,27 @@ export default function Page(){
 .phi{width:100%;aspect-ratio:16/9;border-radius:8px;margin-bottom:clamp(32px,4vw,48px);display:flex;align-items:center;justify-content:center;border:.5px solid var(--bd)}.phpl{font-size:14px;color:var(--f4);opacity:.5}
 .pby{max-width:680px;margin-bottom:clamp(40px,5vw,64px)}.pbt{font-size:15px;color:var(--f2);line-height:1.75;white-space:pre-line}
 .pig{display:grid;grid-template-columns:1fr 1fr;gap:clamp(8px,1vw,14px);margin-bottom:clamp(40px,5vw,64px)}.pic{aspect-ratio:4/3;border-radius:6px;display:flex;align-items:center;justify-content:center;border:.5px solid var(--bd)}.picl{font-size:12px;color:var(--f4);opacity:.4}
-.wip-ov{position:absolute;inset:0;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);opacity:0;transition:opacity .35s ease;z-index:2;padding:24px}
-.pe:hover .wip-ov{opacity:1}
-.wip-anim{position:relative;width:56px;height:56px;margin-bottom:20px}
-.wip-ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,0.15);animation:wip-spin 4s linear infinite}
-.wip-r2{inset:8px;border-color:rgba(255,255,255,0.25);animation-duration:3s;animation-direction:reverse}
-.wip-r3{inset:16px;border-color:rgba(255,255,255,0.35);animation-duration:2s}
-.wip-dot{position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:var(--tl);animation:wip-pulse 2s ease-in-out infinite}
-@keyframes wip-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-@keyframes wip-pulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}}
-.wip-label{font-size:14px;font-weight:500;color:rgba(255,255,255,0.9);letter-spacing:-.01em;margin-bottom:8px}
-.wip-sub{font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;text-align:center;max-width:300px;margin:0}
-.wip-sub strong{color:rgba(255,255,255,0.75);font-weight:500}
-.wip-cta{display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:12px;font-weight:500;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px 16px;transition:background .2s,border-color .2s}.wip-cta:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.4)}
+.req-ov{position:absolute;inset:0;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);opacity:0;transition:opacity .35s ease;z-index:2;padding:24px;cursor:pointer;gap:10px}
+.pe:hover .req-ov{opacity:1}
+.req-label{font-size:14px;font-weight:500;color:rgba(255,255,255,0.9);letter-spacing:-.01em}
+.req-sub{font-size:12px;color:rgba(255,255,255,0.5);text-align:center;max-width:260px;margin:0;line-height:1.5}
+.req-link{font-size:12px;color:var(--tl);margin-top:10px;font-weight:500;transition:color .2s}.pe:hover .req-link{color:var(--fg)}
+.rm-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;animation:fi .2s}
+.rm{background:var(--bg);border:.5px solid var(--bd);border-radius:16px;width:min(420px,90vw);max-height:90vh;overflow-y:auto;padding:32px;position:relative;animation:su .3s}
+.rm-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:var(--hb);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--f3);font-size:18px;transition:background .2s,color .2s}.rm-close:hover{background:var(--la);color:var(--fg)}
+.rm-h{margin-bottom:24px}
+.rm-proj{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--tl);font-weight:500;margin-bottom:8px}
+.rm-t{font-size:22px;font-weight:500;color:var(--fg);letter-spacing:-.02em;margin-bottom:8px}
+.rm-s{font-size:13px;color:var(--f2);line-height:1.6;margin:0}
+.rm-f{display:flex;flex-direction:column;gap:16px}
+.rm-l{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:var(--f3)}
+.rm-i{font-size:14px;font-family:inherit;color:var(--fg);background:var(--hb);border:.5px solid var(--bd);border-radius:8px;padding:10px 14px;outline:none;transition:border-color .2s}.rm-i:focus{border-color:var(--tl)}.rm-i::placeholder{color:var(--f4)}
+.rm-btn{font-size:14px;font-family:inherit;font-weight:500;color:var(--bg);background:var(--fg);border:none;border-radius:8px;padding:12px;cursor:pointer;transition:opacity .2s;margin-top:4px}.rm-btn:hover{opacity:.85}.rm-btn:disabled{opacity:.5;cursor:wait}
+.rm-err{font-size:12px;color:#e55;margin:0;text-align:center}
+.rm-done{display:flex;flex-direction:column;align-items:center;text-align:center;padding:16px 0}
+.rm-done-t{font-size:20px;font-weight:500;color:var(--fg);margin:20px 0 8px}
+.rm-done-s{font-size:13px;color:var(--f2);line-height:1.6;margin:0 0 24px;max-width:300px}
+.rm-done-btn{font-size:13px;font-family:inherit;color:var(--f2);background:var(--hb);border:.5px solid var(--bd);border-radius:8px;padding:10px 24px;cursor:pointer;transition:background .2s}.rm-done-btn:hover{background:var(--la)}
 .np{border-top:.5px solid var(--bd);padding-top:32px;cursor:pointer;position:relative}.npl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--f4);margin-bottom:8px;font-weight:500}.npn{font-size:clamp(20px,3vw,32px);font-weight:500;color:var(--f3);letter-spacing:-.02em;transition:color .3s;display:inline-flex;align-items:center;gap:12px}.np:hover .npn{color:var(--fg)}.npa{transition:transform .3s cubic-bezier(.16,1,.3,1);display:inline-block;font-size:.7em}.np:hover .npa{transform:translateX(6px)}
 .cvp{padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.cvh{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start;margin-bottom:clamp(36px,5vw,56px)}.cvt{font-size:clamp(32px,5vw,48px);font-weight:500;color:var(--fg);letter-spacing:-.03em;margin-bottom:4px}.cvst{font-size:15px;color:var(--f2)}
 .cvph{width:120px;height:120px;border-radius:8px;background:var(--cd);border:.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0}.cvphl{font-size:10px;color:var(--f4);text-transform:uppercase}
@@ -365,7 +379,7 @@ export default function Page(){
             </div>
           </section>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
-          <div className="pg pd">{P.map(p=><div key={p.id} className="pe"><div className="pc" style={{background:p.c}}>{p.img&&<img className="pci" src={p.img} alt={p.n}/>}{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{!p.img&&p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}<div className="wip-ov"><div className="wip-anim"><div className="wip-ring"/><div className="wip-ring wip-r2"/><div className="wip-ring wip-r3"/><div className="wip-dot"/></div><div className="wip-label">Work in progress</div><p className="wip-sub">Case study coming soon.<br/>Available via <strong>Loom</strong> or <strong>Google Meet</strong>.</p><a className="wip-cta" href="mailto:akashtrivedi30@gmail.com?subject=Case%20Study%20Walkthrough%20Request" onClick={e=>e.stopPropagation()}>Send me an email →</a></div></div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div></div>)}</div>
+          <div className="pg pd">{P.map(p=><div key={p.id} className="pe" style={{cursor:"pointer"}} onClick={()=>setReqProj(p)}><div className="pc" style={{background:p.c}}>{p.img&&<img className="pci" src={p.img} alt={p.n}/>}{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{!p.img&&p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}<div className="req-ov"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div className="req-label">Request Case Study</div><p className="req-sub">Full process, research, and design outcomes.</p></div></div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div><div className="req-link">Request case study →</div></div>)}</div>
           {/* ================================================================
               FOOTER — This footer appears on multiple pages. To update
               your links or copyright, search for "ft2" in this file and
@@ -416,6 +430,28 @@ export default function Page(){
           <div className="ft2" style={{marginTop:"clamp(40px,5vw,64px)"}}><span className="ftx">© 2026 Akash Trivedi</span><div style={{display:"flex",gap:20}}><a className="ftl" href="https://www.linkedin.com/in/kaa5h/" target="_blank" rel="noopener noreferrer">LinkedIn</a><a className="ftl" href="https://www.instagram.com/k445h/" target="_blank" rel="noopener noreferrer">Instagram</a></div></div>
         </div>})()}
       </div>
+      {reqProj&&<div className="rm-backdrop" onClick={closeReq}><div className="rm" onClick={e=>e.stopPropagation()}>
+        <button className="rm-close" onClick={closeReq}>×</button>
+        {reqStatus==="sent"?<div className="rm-done">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--tl)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div className="rm-done-t">Request sent</div>
+          <p className="rm-done-s">Thanks! I'll review your request and share the case study with you shortly.</p>
+          <button className="rm-done-btn" onClick={closeReq}>Close</button>
+        </div>:<>
+          <div className="rm-h">
+            <div className="rm-proj">{reqProj.n}</div>
+            <h2 className="rm-t">Request Case Study</h2>
+            <p className="rm-s">I'll send you the full case study including process, research, and design outcomes.</p>
+          </div>
+          <form className="rm-f" onSubmit={submitReq}>
+            <label className="rm-l">Name<input className="rm-i" required value={reqForm.name} onChange={e=>setReqForm(f=>({...f,name:e.target.value}))} placeholder="Your name"/></label>
+            <label className="rm-l">Work email<input className="rm-i" type="email" required value={reqForm.email} onChange={e=>setReqForm(f=>({...f,email:e.target.value}))} placeholder="you@company.com"/></label>
+            <label className="rm-l">Company <span style={{color:"var(--f4)",fontWeight:400}}>(optional)</span><input className="rm-i" value={reqForm.company} onChange={e=>setReqForm(f=>({...f,company:e.target.value}))} placeholder="Company name"/></label>
+            <button className="rm-btn" type="submit" disabled={reqStatus==="sending"}>{reqStatus==="sending"?"Sending...":"Send Request"}</button>
+            {reqStatus==="error"&&<p className="rm-err">Something went wrong. Try emailing me at akashtrivedi30@gmail.com</p>}
+          </form>
+        </>}
+      </div></div>}
     </div>
   );
 }
