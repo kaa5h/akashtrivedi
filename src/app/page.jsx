@@ -11,7 +11,7 @@ const W3F_KEY="b319f9e4-4fd2-4272-a8c6-f5a5712e25fb";
    HEADING: still deciding — swap MARQUEE_HEADING between the candidates.
    Keep it sentence case; it's styled like the other small section captions.
    ======================================================================== */
-const MARQUEE_HEADING = "In production at"; /* alts: "Designed for" · "Where my work runs" */
+const MARQUEE_HEADING = "Powering the experience at"; /* alts: "In daily use at" · "Trusted by companies like" · "Relied on at" */
 
 /* Logos live in /public/logos/. Array order = left-to-right display order.
    Extensions are mixed (krone is .svg, the rest .png) so each filename is
@@ -450,9 +450,9 @@ export default function Page(){
               </div>
             </div>
           </section>
-          <Marquee/>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
           <div className="pg pd">{P.map(p=><div key={p.id} className="pe" style={{cursor:"pointer"}} onClick={()=>setReqProj(p)}><div className="pc" style={{background:p.c}}>{p.img&&<img className="pci" src={p.img} alt={p.n}/>}{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{!p.img&&p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}<div className="req-ov"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div className="req-label">Request Case Study</div><p className="req-sub">Full process, research, and design outcomes.</p></div></div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div><div className="req-link">Request case study →</div></div>)}</div>
+          <Marquee/>
           {/* ================================================================
               FOOTER — This footer appears on multiple pages. To update
               your links or copyright, search for "ft2" in this file and
