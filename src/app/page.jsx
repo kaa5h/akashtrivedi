@@ -6,6 +6,35 @@ const CPE_COMP="/comparisons/cpe/index.html";
 const W3F_KEY="b319f9e4-4fd2-4272-a8c6-f5a5712e25fb";
 
 /* ========================================================================
+   LOGO MARQUEE (the "In production at" strip between hero and case studies)
+   =========================================================================
+   HEADING: still deciding — swap MARQUEE_HEADING between the candidates.
+   Keep it sentence case; it's styled like the other small section captions.
+   ======================================================================== */
+const MARQUEE_HEADING = "In production at"; /* alts: "Designed for" · "Where my work runs" */
+
+/* Logos live in /public/logos/. Array order = left-to-right display order.
+   Extensions are mixed (krone is .svg, the rest .png) so each filename is
+   explicit on purpose — do NOT auto-glob. w/h are the intrinsic pixel sizes,
+   used only to reserve space and prevent layout shift; on screen every logo
+   is sized by CSS HEIGHT (--mq-h), width auto. `scale` is an optional optical
+   nudge (default none = 1) — bump it only if a logo reads too big/small. */
+const MARQUEE_LOGOS = [
+  { file:"liebherr.png",       name:"Liebherr",       w:1280, h:159  },
+  { file:"porsche.png",        name:"Porsche",        w:768,  h:53   },
+  { file:"krone.svg",          name:"Krone",          w:381,  h:103  },
+  { file:"agristo.png",        name:"Agristo",        w:1196, h:383  },
+  { file:"blum.png",           name:"Blum",           w:1280, h:347  },
+  { file:"claas.png",          name:"Claas",          w:1920, h:405  },
+  { file:"teamviewer.png",     name:"TeamViewer",     w:1920, h:437  },
+  { file:"miele.png",          name:"Miele",          w:1442, h:265  },
+  { file:"capgemini.png",      name:"Capgemini",      w:500,  h:116  },
+  { file:"siemens-energy.png", name:"Siemens Energy", w:1920, h:659  },
+  { file:"zf.png",             name:"ZF",             w:1280, h:1280 },
+  { file:"powerco.png",        name:"Powerco",        w:330,  h:36   },
+];
+
+/* ========================================================================
    PROJECTS
    =========================================================================
    To ADD a new project: Copy one of the blocks below and paste it at the
@@ -131,6 +160,31 @@ function ScaledIframe({src,title}){
   return <div ref={ref} style={{position:"absolute",inset:0,overflow:"hidden"}}><iframe src={src} title={title} style={{width:1440,height:900,border:"none",pointerEvents:"none",transformOrigin:"top left",transform:`translate(${off.x}px,${off.y}px) scale(${s})`,display:"block"}}/></div>;
 }
 function V({top,left,right,bottom}){return <div style={{position:"absolute",width:5,height:5,background:"var(--bg)",border:"0.5px solid var(--vertex)",...(top!=null?{top:top-2.5}:{}),...(bottom!=null?{bottom:bottom-2.5}:{}),...(left!=null?{left:left-2.5}:{}),...(right!=null?{right:right-2.5}:{}),zIndex:10,pointerEvents:"none"}}/>}
+/* Logo marquee — CSS-only infinite right-to-left scroll. Two identical groups
+   sit side by side in a max-content track; translateX(0 → -50%) shifts it by
+   exactly one group, so the second group lands where the first started (no
+   seam, no JS loop). The second group is aria-hidden — it's a visual copy.
+   Pauses on hover, freezes under prefers-reduced-motion (see the .mq CSS). */
+function Marquee(){
+  const row=(dup)=>MARQUEE_LOGOS.map(l=>(
+    <span className="mq-item" key={(dup?"b-":"a-")+l.file}>
+      <img className="mq-logo" src={`/logos/${l.file}`} width={l.w} height={l.h}
+           alt={dup?"":l.name} loading="eager" draggable="false"
+           style={l.scale?{height:`calc(var(--mq-h) * ${l.scale})`}:undefined}/>
+    </span>
+  ));
+  return (
+    <section className="mq" aria-label="Companies using my design work">
+      <div className="pd"><div className="mq-head">{MARQUEE_HEADING}</div></div>
+      <div className="mq-viewport">
+        <div className="mq-track">
+          <div className="mq-group">{row(false)}</div>
+          <div className="mq-group" aria-hidden="true">{row(true)}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
 export default function Page(){
   const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false);
   const [reqProj,setReqProj]=useState(null),[reqForm,setReqForm]=useState({name:"",email:"",company:""}),[reqStatus,setReqStatus]=useState("idle");
@@ -248,6 +302,10 @@ export default function Page(){
 .fp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s cubic-bezier(.4,0,.2,1)}.fp.o{grid-template-rows:1fr}.fpi{overflow:hidden;min-height:0}.fpc{padding:8px 8px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .3s cubic-bezier(.4,0,.2,1)}.fp.o .fpc{opacity:1;transform:translateY(0);transition:opacity .3s .15s,transform .35s cubic-bezier(.4,0,.2,1) .12s}
 .fpd{height:.5px;background:var(--bd);margin:0 8px;opacity:0;transition:opacity .2s}.fp.o .fpd{opacity:.5;transition:opacity .2s .1s}
 .cg{display:flex;gap:0;background:var(--hb);border-radius:4px;padding:2px;flex-shrink:0}.cb{font-size:11px;font-weight:500;color:var(--f2);background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:3px;transition:color .15s,background .15s;white-space:nowrap}.cb:hover{color:var(--fg)}.cb.a{color:var(--fg);background:var(--la)}
+.cb-de{position:relative}
+.cb-de::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(3px);white-space:nowrap;background:var(--fg);color:var(--bg);font-size:10px;font-weight:500;letter-spacing:.01em;padding:5px 9px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;box-shadow:0 6px 18px rgba(0,0,0,0.28);z-index:60}
+.cb-de:hover::after{opacity:1;transform:translateX(-50%) translateY(0)}
+.fp.o .fpi{overflow:visible}
 .tg{display:flex;align-items:center;flex-shrink:0}
 .pal-track{position:relative;width:clamp(120px,20vw,200px);height:24px;display:flex;align-items:center;background:var(--hb);border-radius:6px;padding:0 12px;border:.5px solid var(--bd)}
 .pal-dots{position:absolute;left:12px;right:12px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:space-between;pointer-events:none;z-index:1}
@@ -264,7 +322,7 @@ export default function Page(){
 .pd{padding-left:clamp(16px,3.2vw,32px);padding-right:clamp(16px,3.2vw,32px)}
 .hr{height:100vh;display:flex;flex-direction:column;background:var(--hg);transition:background .35s;position:relative;overflow:hidden;padding:0}
 .tgr{flex:1;display:grid;gap:4px;min-height:0;overflow:hidden;padding:clamp(8px,1.5vw,16px)}
-.hr-bot{flex-shrink:0;height:280px;padding:16px clamp(16px,3.2vw,32px) 80px;display:flex;flex-direction:column;justify-content:flex-start;position:relative}
+.hr-bot{flex-shrink:0;min-height:280px;padding:16px clamp(16px,3.2vw,32px) 80px;display:flex;flex-direction:column;justify-content:flex-start;position:relative}
 .tgc{width:100%;height:100%;border-radius:9999px;position:relative;cursor:pointer;transition:background .45s cubic-bezier(.4,0,.2,1),transform .15s ease,box-shadow .3s ease,border-color .3s;border:1px solid rgba(128,128,128,0.2)}
 .tgc.off{background:rgba(255,255,255,0.06)}
 .tgc.on{background:#3B82F6;border-color:rgba(59,130,246,0.5)}
@@ -342,13 +400,27 @@ export default function Page(){
 .bpdv{position:relative;height:.5px;background:var(--bd);margin-bottom:clamp(28px,4vw,40px)}.bpbd{max-width:640px;margin-bottom:clamp(48px,6vw,72px)}.bppr{font-size:15px;color:var(--f2);line-height:1.8;margin-bottom:24px}.bppr:last-child{margin-bottom:0}
 .bpn{border-top:.5px solid var(--bd);padding-top:32px;cursor:pointer;position:relative}.bpnl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--f4);margin-bottom:8px;font-weight:500}.bpnt{font-size:clamp(17px,2.5vw,24px);font-weight:500;color:var(--f3);line-height:1.35;transition:color .3s;display:inline-flex;align-items:center;gap:10px;max-width:560px}.bpn:hover .bpnt{color:var(--fg)}.bpna{transition:transform .3s cubic-bezier(.16,1,.3,1);display:inline-block;font-size:.8em;flex-shrink:0}.bpn:hover .bpna{transform:translateX(5px)}
 .ft2{display:flex;align-items:center;justify-content:space-between;padding-top:16px;padding-bottom:16px;border-top:.5px solid var(--bd)}.ftx{font-size:11px;color:var(--f4)}.ftl{font-size:12px;color:var(--f3);text-decoration:none;cursor:pointer;transition:color .2s}.ftl:hover{color:var(--tl)}
+.mq{--mq-h:32px;--mq-gap:88px;--mq-fade:100px;padding:clamp(64px,9vw,120px) 0;border-top:.5px solid var(--bd);position:relative;overflow:hidden}
+.mq-head{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--f4);font-weight:500;margin-bottom:clamp(36px,5vw,52px)}
+.mq-viewport{overflow:hidden;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--mq-fade),#000 calc(100% - var(--mq-fade)),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 var(--mq-fade),#000 calc(100% - var(--mq-fade)),transparent 100%)}
+.mq-track{display:flex;width:max-content;animation:mq-scroll 40s linear infinite;will-change:transform}
+.mq-group{display:flex;align-items:center}
+.mq-item{display:flex;align-items:center;flex:0 0 auto;margin-right:var(--mq-gap)}
+.mq-logo{height:var(--mq-h);width:auto;display:block;opacity:.5;transition:opacity .35s ease,transform .4s cubic-bezier(.16,1,.3,1);-webkit-user-select:none;user-select:none}
+.r:not(.light) .mq-logo{filter:brightness(0) invert(1)}
+.r.light .mq-logo{filter:brightness(0)}
+.mq-viewport:hover .mq-logo{opacity:.28}
+.mq-logo:hover{opacity:1;transform:scale(1.06)}
+.mq-viewport:hover .mq-track{animation-play-state:paused}
+@keyframes mq-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.mq-track{animation:none}}
 @media(max-width:1024px){.htxt{max-width:70%}.tgr{display:none}.hr{height:auto;min-height:auto;overflow:visible;padding:clamp(16px,3.2vw,32px)}.hr-bot{padding:0;min-height:auto;height:auto;position:static}.hni{display:none}.hn{border-bottom:none;padding-bottom:0}}
-@media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}}
-@media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}}
+@media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}.mq{--mq-h:32px;--mq-gap:48px;--mq-fade:40px}}
+@media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}.mq{--mq-gap:40px;--mq-fade:24px}}
       `}</style>
       <nav className="fn" style={{animation:m?"fi .5s .4s both":"none"}} onMouseLeave={off}>
         <div className={`fp${ne?" o":""}`}><div className="fpi"><div className="fpc">
-          <div className="cg"><button className={`cb${lang==="EN"?" a":""}`} onClick={()=>sa(()=>setLang("EN"))}>EN</button><button className={`cb${lang==="DE"?" a":""}`} onClick={()=>sa(()=>setLang("DE"))}>DE</button></div>
+          <div className="cg"><button className={`cb${lang==="EN"?" a":""}`} onClick={()=>sa(()=>setLang("EN"))}>EN</button><button className={`cb cb-de${lang==="DE"?" a":""}`} data-tip="German version coming soon" onClick={()=>sa(()=>setLang("DE"))}>DE</button></div>
           <div className="tg"><div className="pal-track">
             <div className="pal-dots">{ANCH.map((a,i)=>{const nearest=ANCH.reduce((best,an,j)=>Math.abs(an.p-sv)<Math.abs(ANCH[best].p-sv)?j:best,0);return <div key={i} className={`pal-anchor${i===nearest?" act":""}`}/>})}</div>
             <input type="range" className="pal-slider" min="0" max="100" step="0.1" value={sv} onChange={e=>setSv(+e.target.value)} />
@@ -378,6 +450,7 @@ export default function Page(){
               </div>
             </div>
           </section>
+          <Marquee/>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
           <div className="pg pd">{P.map(p=><div key={p.id} className="pe" style={{cursor:"pointer"}} onClick={()=>setReqProj(p)}><div className="pc" style={{background:p.c}}>{p.img&&<img className="pci" src={p.img} alt={p.n}/>}{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{!p.img&&p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}<div className="req-ov"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div className="req-label">Request Case Study</div><p className="req-sub">Full process, research, and design outcomes.</p></div></div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div><div className="req-link">Request case study →</div></div>)}</div>
           {/* ================================================================
