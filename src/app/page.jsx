@@ -186,7 +186,7 @@ function Marquee(){
   );
 }
 export default function Page(){
-  const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false);
+  const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false),[heroView,setHeroView]=useState("toggles"),[heroTouched,setHeroTouched]=useState(false);
   const [reqProj,setReqProj]=useState(null),[reqForm,setReqForm]=useState({name:"",email:"",company:""}),[reqStatus,setReqStatus]=useState("idle");
   const mousePos=useRef({x:0,y:0}),gifPos=useRef({x:0,y:0}),gifRef=useRef(null),rafRef=useRef(null);
   useEffect(()=>{const onMove=(e)=>{mousePos.current={x:e.clientX,y:e.clientY}};window.addEventListener("mousemove",onMove);const animate=()=>{const gp=gifPos.current,mp=mousePos.current;gp.x+=(mp.x-gp.x)*0.08;gp.y+=(mp.y-gp.y)*0.08;if(gifRef.current){gifRef.current.style.transform=`translate3d(${gp.x-70}px,${gp.y-70}px,0)`}rafRef.current=requestAnimationFrame(animate)};rafRef.current=requestAnimationFrame(animate);return()=>{window.removeEventListener("mousemove",onMove);cancelAnimationFrame(rafRef.current)}},[]);
@@ -206,6 +206,12 @@ export default function Page(){
   ];
   const interpPal=(v)=>{let lo=ANCH[0],hi=ANCH[ANCH.length-1];for(let i=0;i<ANCH.length-1;i++){if(v>=ANCH[i].p&&v<=ANCH[i+1].p){lo=ANCH[i];hi=ANCH[i+1];break}}const t=hi.p===lo.p?0:(v-lo.p)/(hi.p-lo.p);const l=(k)=>lerpHex(lo[k],hi[k],t);const bg=l("bg"),fg=l("fg");const lum=(parseInt(bg.slice(1,3),16)*299+parseInt(bg.slice(3,5),16)*587+parseInt(bg.slice(5,7),16)*114)/1000;return{bg,fg,f2:l("f2"),f3:l("f3"),f4:l("f4"),tl:l("tl"),cd:l("cd"),hg:l("hg"),isLight:lum>140,bd:lum>140?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.08)",nb:lum>140?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.12)",hb:lum>140?"rgba(0,0,0,0.04)":"rgba(255,255,255,0.05)",la:lum>140?"rgba(0,0,0,0.06)":"rgba(255,255,255,0.08)",ht:lum>140?"rgba(0,0,0,0.1)":"rgba(255,255,255,0.1)",vt:lum>140?"rgba(0,0,0,0.15)":"rgba(255,255,255,0.2)",tb:lum>140?"rgba(0,0,0,0.08)":"rgba(255,255,255,0.1)",thb:lum>140?"rgba(0,0,0,0.12)":"rgba(255,255,255,0.15)"}};
   const cp=interpPal(sv);const isLight=cp.isLight;
+  /* Push the current palette into the Blocks animation (it runs in an iframe).
+     Wireframe look: fill = the hero background (faces read as solid voids),
+     stroke = a light foreground tone (the thin outlines that define the form). */
+  const blocksRef=useRef(null);
+  const postBlockColors=()=>{const w=blocksRef.current?.contentWindow;if(w)w.postMessage({type:"blocksColors",fill:cp.hg,stroke:cp.f2},"*")};
+  useEffect(()=>{postBlockColors()},[sv,heroView]);
   /* ======================================================================
      HOMEPAGE INTRO TABS
      ======================================================================
@@ -322,6 +328,16 @@ export default function Page(){
 .pd{padding-left:clamp(16px,3.2vw,32px);padding-right:clamp(16px,3.2vw,32px)}
 .hr{height:100vh;display:flex;flex-direction:column;background:var(--hg);transition:background .35s;position:relative;overflow:hidden;padding:0}
 .tgr{flex:1;display:grid;gap:4px;min-height:0;overflow:hidden;padding:clamp(8px,1.5vw,16px)}
+.bvw{flex:1;min-height:0;overflow:hidden;padding:clamp(8px,1.5vw,16px) clamp(16px,3.2vw,32px)}
+.bvw iframe{width:100%;height:100%;border:none;display:block}
+.hview-wrap{position:absolute;right:clamp(16px,3.2vw,32px);bottom:clamp(16px,3.2vw,32px);z-index:6;display:flex;align-items:center;gap:10px}
+.hview{position:relative;backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
+.hview.nudge{animation:hviewPulse 2.6s ease-in-out 3}
+@keyframes hviewPulse{0%,100%{box-shadow:0 0 0 0 rgba(128,128,128,0)}50%{box-shadow:0 0 0 4px var(--la)}}
+.hview-hint{font-size:11px;color:var(--f3);letter-spacing:.02em;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;animation:hintIn .5s both;pointer-events:none}
+.hview-arrow{display:inline-block;animation:hintNudge 1.4s ease-in-out infinite}
+@keyframes hintNudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+@keyframes hintIn{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:translateX(0)}}
 .hr-bot{flex-shrink:0;min-height:280px;padding:16px clamp(16px,3.2vw,32px) 80px;display:flex;flex-direction:column;justify-content:flex-start;position:relative}
 .tgc{width:100%;height:100%;border-radius:9999px;position:relative;cursor:pointer;transition:background .45s cubic-bezier(.4,0,.2,1),transform .15s ease,box-shadow .3s ease,border-color .3s;border:1px solid rgba(128,128,128,0.2)}
 .tgc.off{background:rgba(255,255,255,0.06)}
@@ -414,7 +430,7 @@ export default function Page(){
 .mq-viewport:hover .mq-track{animation-play-state:paused}
 @keyframes mq-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){.mq-track{animation:none}}
-@media(max-width:1024px){.htxt{max-width:70%}.tgr{display:none}.hr{height:auto;min-height:auto;overflow:visible;padding:clamp(16px,3.2vw,32px)}.hr-bot{padding:0;min-height:auto;height:auto;position:static}.hni{display:none}.hn{border-bottom:none;padding-bottom:0}}
+@media(max-width:1024px){.htxt{max-width:70%}.tgr{display:none}.bvw{display:none}.hview-wrap{display:none}.hr{height:auto;min-height:auto;overflow:visible;padding:clamp(16px,3.2vw,32px)}.hr-bot{padding:0;min-height:auto;height:auto;position:static}.hni{display:none}.hn{border-bottom:none;padding-bottom:0}}
 @media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}.mq{--mq-h:32px;--mq-gap:48px;--mq-fade:40px}}
 @media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}.mq{--mq-gap:40px;--mq-fade:24px}}
       `}</style>
@@ -436,8 +452,22 @@ export default function Page(){
       <div className={`pt${fd?" out":""}`}>
         {pg==="home"&&<>
           <section className="hr">
-            <div className="tgr" ref={gridRef} style={{gridTemplateColumns:`repeat(${GC},1fr)`,gridTemplateRows:`repeat(${GR},1fr)`}}>
-              {tg&&tg.slice(0,GR).map((row,ri)=>row.slice(0,GC).map((cell,ci)=><div key={`${ri}-${ci}`} className={`tgc ${cell?"on":"off"}${nameMap[ri]?.[ci]?" nm":""}`} style={nameMap[ri]?.[ci]?{animationDelay:`${((ri*GC+ci)%7)*0.4}s`}:undefined} onClick={()=>flip(ri,ci)}/>))}
+            {heroView==="toggles"
+              ? <div className="tgr" ref={gridRef} style={{gridTemplateColumns:`repeat(${GC},1fr)`,gridTemplateRows:`repeat(${GR},1fr)`}}>
+                  {tg&&tg.slice(0,GR).map((row,ri)=>row.slice(0,GC).map((cell,ci)=><div key={`${ri}-${ci}`} className={`tgc ${cell?"on":"off"}${nameMap[ri]?.[ci]?" nm":""}`} style={nameMap[ri]?.[ci]?{animationDelay:`${((ri*GC+ci)%7)*0.4}s`}:undefined} onClick={()=>flip(ri,ci)}/>))}
+                </div>
+              : <div className="bvw"><iframe ref={blocksRef} src="/blocks.html" title="Block animation" scrolling="no" onLoad={postBlockColors}/></div>
+            }
+            {/* HERO VIEW SWITCHER — lets visitors flip the hero between the
+                interactive "Toggles" grid and the "Blocks" voxel animation.
+                A small playful hint nudges first-time visitors to try it;
+                it fades away the moment they interact (heroTouched). */}
+            <div className="hview-wrap">
+              {!heroTouched&&<span className="hview-hint">two moods<span className="hview-arrow">→</span></span>}
+              <div className={`hview cg${heroTouched?"":" nudge"}`}>
+                <button className={`cb${heroView==="toggles"?" a":""}`} onClick={()=>{setHeroView("toggles");setHeroTouched(true)}}>Toggles</button>
+                <button className={`cb${heroView==="blocks"?" a":""}`} onClick={()=>{setHeroView("blocks");setHeroTouched(true)}}>Blocks</button>
+              </div>
             </div>
             <div className="hr-bot">
               <div className="htabs">
