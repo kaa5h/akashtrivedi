@@ -212,6 +212,12 @@ export default function Page(){
   const blocksRef=useRef(null);
   const postBlockColors=()=>{const w=blocksRef.current?.contentWindow;if(w)w.postMessage({type:"blocksColors",fill:cp.hg,stroke:cp.f2},"*")};
   useEffect(()=>{postBlockColors()},[sv,heroView]);
+  /* Publish an inversion colour to the page root so the drifting blob (rendered
+     up in layout) can tint itself to the colour slider. It must stay BRIGHT or a
+     difference-blend goes invisible on light palettes, so we take the theme's
+     accent and lighten it toward white — bright enough to invert everywhere,
+     while still carrying the current theme's hue. */
+  useEffect(()=>{document.documentElement.style.setProperty("--inv-color",lerpHex(cp.tl,"#FFFFFF",0.3))},[cp.tl]);
   /* ======================================================================
      HOMEPAGE INTRO TABS
      ======================================================================
