@@ -468,7 +468,7 @@ export default function Page(){
               ? <div className="tgr" ref={gridRef} style={{gridTemplateColumns:`repeat(${GC},1fr)`,gridTemplateRows:`repeat(${GR},1fr)`}}>
                   {tg&&tg.slice(0,GR).map((row,ri)=>row.slice(0,GC).map((cell,ci)=><div key={`${ri}-${ci}`} className={`tgc ${cell?"on":"off"}${nameMap[ri]?.[ci]?" nm":""}`} style={nameMap[ri]?.[ci]?{animationDelay:`${((ri*GC+ci)%7)*0.4}s`}:undefined} onClick={()=>flip(ri,ci)}/>))}
                 </div>
-              : <div className="bvw"><iframe ref={blocksRef} src="/blocks.html" title="Block animation" scrolling="no" onLoad={postBlockColors}/></div>
+              : <div className="bvw"><iframe ref={blocksRef} src="/blocks.html?v=5" title="Block animation" scrolling="no" onLoad={postBlockColors}/></div>
             }
             {/* HERO VIEW SWITCHER — lets visitors flip the hero between the
                 interactive "Toggles" grid and the "Blocks" voxel animation.
