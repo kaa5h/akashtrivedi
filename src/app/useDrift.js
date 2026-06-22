@@ -3,10 +3,16 @@
 /* ========================================================================
    useDrift — shared motion engine
    =========================================================================
-   Drives an element so it drifts slowly around the screen, bounces off the
-   edges, gently breathes its size, and stays proportionate to the viewport.
+   Drives an element so it drifts slowly around the PAGE, bounces gently off
+   every edge, breathes its size, and stays proportionate to the viewport.
    Both inversion versions (v1 liquid blob, v2 dot screen) use this so they
    move identically — only their LOOK differs.
+
+   MOTION MODEL: the element lives in PAGE coordinates (its host uses
+   position:absolute), so it scrolls with the content. It roams the full page
+   — left/right are clamped to the viewport width, top/bottom to the whole
+   document height. It ALWAYS bounces off an edge: it never sails off-screen
+   and never teleports back in from somewhere else. Smooth and continuous.
 
    Pass a ref to the element you want to move, plus a few options.
    ======================================================================== */
@@ -14,7 +20,12 @@ import { useEffect } from 'react'
 
 const shortSide = () => Math.min(window.innerWidth, window.innerHeight)
 
-export function useDrift(ref, { speed, minFrac, maxFrac, breathSpeed, bounceChance = 0.55 }) {
+// The box the blob is allowed to roam: full viewport width (no horizontal
+// scroll on this site) by full document height (so it can drift down the page).
+const roamW = () => document.documentElement.clientWidth
+const roamH = () => Math.max(document.documentElement.scrollHeight, window.innerHeight)
+
+export function useDrift(ref, { speed, minFrac, maxFrac, breathSpeed }) {
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -30,24 +41,14 @@ export function useDrift(ref, { speed, minFrac, maxFrac, breathSpeed, bounceChan
     let breathT = Math.random() * Math.PI * 2
     let r = 0
 
-    let passing = false  // true = currently allowed to sail off-screen
-    let touching = false // true = overlapping a wall last frame (so we decide once per contact)
-
-    // Bring the blob back in from a random edge, heading inward, after it has
-    // fully drifted off-screen.
-    const respawn = () => {
-      const edge = Math.floor(Math.random() * 4)
-      const spread = (Math.random() - 0.5) * Math.PI * 0.6 // inward angle, up to ~54°
-      const c = Math.cos(spread) * speed
-      const s = Math.sin(spread) * speed
-      const w = window.innerWidth, h = window.innerHeight
-      if (edge === 0)      { x = -r;    y = Math.random() * h; vx = c;  vy = s }  // from left
-      else if (edge === 1) { x = w + r; y = Math.random() * h; vx = -c; vy = s }  // from right
-      else if (edge === 2) { y = -r;    x = Math.random() * w; vy = c;  vx = s }  // from top
-      else                 { y = h + r; x = Math.random() * w; vy = -c; vx = s }  // from bottom
-      passing = false
-      touching = true // it starts at the wall while entering — don't re-decide yet
-    }
+    // Cache the roam bounds; reading layout every frame would cause jank.
+    // Refresh them on resize and whenever the page's content height changes
+    // (images loading, sections expanding, etc.).
+    let W = roamW(), H = roamH()
+    const measure = () => { W = roamW(); H = roamH() }
+    window.addEventListener('resize', measure)
+    const ro = new ResizeObserver(measure)
+    ro.observe(document.body)
 
     let last = performance.now()
     let raf = 0
@@ -64,28 +65,12 @@ export function useDrift(ref, { speed, minFrac, maxFrac, breathSpeed, bounceChan
       x += vx * dt
       y += vy * dt
 
-      const w = window.innerWidth, h = window.innerHeight
-
-      if (passing) {
-        // Wait until it's completely gone, then bring it back from a random edge.
-        const fullyOut = x + r < 0 || x - r > w || y + r < 0 || y - r > h
-        if (fullyOut) respawn()
-      } else {
-        const hitL = x - r < 0, hitR = x + r > w, hitT = y - r < 0, hitB = y + r > h
-        const hit = hitL || hitR || hitT || hitB
-        if (hit && !touching) {
-          // New wall contact — randomly bounce, or let it pass through and vanish.
-          if (Math.random() < bounceChance) {
-            if (hitL) { x = r; vx = Math.abs(vx) }
-            if (hitR) { x = w - r; vx = -Math.abs(vx) }
-            if (hitT) { y = r; vy = Math.abs(vy) }
-            if (hitB) { y = h - r; vy = -Math.abs(vy) }
-          } else {
-            passing = true
-          }
-        }
-        touching = hit
-      }
+      // Always bounce: clamp back inside the edge and flip that velocity. The
+      // blob can never leave the page, so it never disappears or jumps.
+      if (x - r < 0)      { x = r;     vx = Math.abs(vx) }
+      else if (x + r > W) { x = W - r; vx = -Math.abs(vx) }
+      if (y - r < 0)      { y = r;     vy = Math.abs(vy) }
+      else if (y + r > H) { y = H - r; vy = -Math.abs(vy) }
 
       el.style.width = `${size}px`
       el.style.height = `${size}px`
@@ -95,6 +80,10 @@ export function useDrift(ref, { speed, minFrac, maxFrac, breathSpeed, bounceChan
     }
 
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [ref, speed, minFrac, maxFrac, breathSpeed, bounceChance])
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
+      ro.disconnect()
+    }
+  }, [ref, speed, minFrac, maxFrac, breathSpeed])
 }

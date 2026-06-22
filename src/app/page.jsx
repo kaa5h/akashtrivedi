@@ -186,7 +186,7 @@ function Marquee(){
   );
 }
 export default function Page(){
-  const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false),[heroView,setHeroView]=useState("toggles"),[heroTouched,setHeroTouched]=useState(false);
+  const [m,setM]=useState(false),[lang,setLang]=useState("EN"),[pg,setPg]=useState("home"),[proj,setProj]=useState(null),[bp,setBp]=useState(null),[fd,setFd]=useState(false),[sv,setSv]=useState(100),[ne,setNe]=useState(false),[htab,setHtab]=useState(0),[nh,setNh]=useState(false),[heroView,setHeroView]=useState("blocks"),[heroTouched,setHeroTouched]=useState(false);
   const [reqProj,setReqProj]=useState(null),[reqForm,setReqForm]=useState({name:"",email:"",company:""}),[reqStatus,setReqStatus]=useState("idle");
   const mousePos=useRef({x:0,y:0}),gifPos=useRef({x:0,y:0}),gifRef=useRef(null),rafRef=useRef(null);
   useEffect(()=>{const onMove=(e)=>{mousePos.current={x:e.clientX,y:e.clientY}};window.addEventListener("mousemove",onMove);const animate=()=>{const gp=gifPos.current,mp=mousePos.current;gp.x+=(mp.x-gp.x)*0.08;gp.y+=(mp.y-gp.y)*0.08;if(gifRef.current){gifRef.current.style.transform=`translate3d(${gp.x-70}px,${gp.y-70}px,0)`}rafRef.current=requestAnimationFrame(animate)};rafRef.current=requestAnimationFrame(animate);return()=>{window.removeEventListener("mousemove",onMove);cancelAnimationFrame(rafRef.current)}},[]);
@@ -218,6 +218,11 @@ export default function Page(){
      accent and lighten it toward white — bright enough to invert everywhere,
      while still carrying the current theme's hue. */
   useEffect(()=>{document.documentElement.style.setProperty("--inv-color",lerpHex(cp.tl,"#FFFFFF",0.3))},[cp.tl]);
+  /* Also publish the current page background to the root. The inverting circle
+     (in layout, outside this component's --bg scope) blends its fill toward
+     this so it stays subtle over empty background while still colouring the
+     text/elements it passes over. */
+  useEffect(()=>{document.documentElement.style.setProperty("--page-bg",cp.bg)},[cp.bg]);
   /* ======================================================================
      HOMEPAGE INTRO TABS
      ======================================================================
@@ -467,7 +472,14 @@ export default function Page(){
             {/* HERO VIEW SWITCHER — lets visitors flip the hero between the
                 interactive "Toggles" grid and the "Blocks" voxel animation.
                 A small playful hint nudges first-time visitors to try it;
-                it fades away the moment they interact (heroTouched). */}
+                it fades away the moment they interact (heroTouched).
+
+                HIDDEN FOR NOW: the Toggles/Blocks switcher is commented out so
+                only the Blocks hero shows. To bring it back, delete the two
+                comment markers below (the opening one above this block and the
+                closing one after the </div>), and set the default heroView back
+                to "toggles" up top if you want the grid as the starting view. */}
+            {/*
             <div className="hview-wrap">
               {!heroTouched&&<span className="hview-hint">two moods<span className="hview-arrow">→</span></span>}
               <div className={`hview cg${heroTouched?"":" nudge"}`}>
@@ -475,6 +487,7 @@ export default function Page(){
                 <button className={`cb${heroView==="blocks"?" a":""}`} onClick={()=>{setHeroView("blocks");setHeroTouched(true)}}>Blocks</button>
               </div>
             </div>
+            */}
             <div className="hr-bot">
               <div className="htabs">
                 {TABS.map((t,i)=><button key={i} className={`htab${htab===i?" a":""}`} onClick={()=>switchTab(i)}>{t.l}</button>)}
