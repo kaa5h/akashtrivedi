@@ -11,22 +11,20 @@
   #hero{ position:fixed; inset:0; overflow:hidden; cursor:pointer; }
   #hero svg{ display:block; width:100%; height:100%; }
 
-  /* v2 NAV — page navigation rendered as cube-buttons that sit inside the
-     ever-changing structure. They share the structure's fill/stroke colors
-     (synced from the parent), and lift like little blocks on hover. A solid
-     offset shadow in the stroke color fakes the extruded "side" of a cube. */
-  #nav{ position:fixed; left:50%; bottom:7vh; transform:translateX(-50%);
-        display:flex; gap:12px; z-index:5; }
-  .nav-cube{ font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
-        letter-spacing:.06em; text-transform:uppercase; color:var(--stroke-c);
-        background:var(--fill); border:1px solid var(--stroke-c);
-        padding:12px 20px; cursor:pointer; -webkit-user-select:none; user-select:none;
-        position:relative; box-shadow:3px 3px 0 0 var(--stroke-c);
-        transition:transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s cubic-bezier(.16,1,.3,1); }
-  .nav-cube::after{ content:''; position:absolute; left:3px; top:3px; right:3px; bottom:3px;
-        border:.5px solid var(--stroke-c); opacity:.3; pointer-events:none; }
-  .nav-cube:hover{ transform:translate(-2px,-4px); box-shadow:6px 8px 0 0 var(--stroke-c); }
-  .nav-cube:active{ transform:translate(1px,1px); box-shadow:2px 2px 0 0 var(--stroke-c); }
+  /* v2 NAV — three PERMANENT blocks that protrude from the structure are the
+     navigation (built as real geometry, see scene.nav in the script). A small
+     label chip is positioned onto each block's projected top and carries the
+     click. The chip shares the structure's fill/stroke so it reads as part of
+     the block. */
+  #nav{ position:fixed; inset:0; z-index:5; pointer-events:none; }
+  .nav-cube{ position:fixed; transform:translate(-50%,-115%); pointer-events:auto;
+        font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+        letter-spacing:.09em; text-transform:uppercase; color:var(--stroke-c);
+        background:var(--fill); border:1px solid var(--stroke-c); padding:7px 12px;
+        cursor:pointer; white-space:nowrap; opacity:0;
+        transition:transform .2s cubic-bezier(.16,1,.3,1), background .2s, color .2s, opacity .45s; }
+  .nav-cube.ready{ opacity:1; }
+  .nav-cube:hover{ transform:translate(-50%,-115%) scale(1.1); background:var(--stroke-c); color:var(--fill); }
 </style>
 
 <div id="hero"></div>
@@ -48,6 +46,7 @@
   var animationId = 0;
   var scene = null;
   var cachedBase = null;
+  var navAnchors = null;   // [{target,label,x,y}] projected positions of the nav blocks
 
   function rand(min,max){ return min + Math.floor(Math.random()*(max-min+1)); }
 
@@ -107,11 +106,26 @@
       });
     }
 
+    // PERMANENT NAV BLOCKS — always added at full size (no animation), so they
+    // stand as fixed anchors while the rest of the structure churns. Then read
+    // back each block's projected top so the label chip can be placed onto it.
+    navAnchors = [];
+    if(scene.nav){
+      scene.nav.forEach(function(nv){
+        e.applyGeometry({ type:'box', position:[nv.bx, nv.by, -nv.H], size:[nv.bw, nv.bh, nv.H] });
+      });
+      scene.nav.forEach(function(nv){
+        var info = e.getVoxelInfo([ nv.bx + Math.floor(nv.bw/2), nv.by, -nv.H ]);
+        var c = info && info.center2D;
+        navAnchors.push({ target:nv.target, label:nv.label, x:c?c.x:0, y:c?c.y:0 });
+      });
+    }
+
     return e.toSVG(SVGOPTS);
   }
 
   function randomizeScene(){
-    var gridPct = rand(7,11);
+    var gridPct = 8;   // fixed so the nav blocks keep a stable size/position across reforms
     var availW = container.clientWidth;
     var gridSize = Math.round((availW*gridPct)/100);
     var cols = Math.ceil(availW/gridSize);
@@ -159,8 +173,22 @@
       }
     });
 
+    // PERMANENT NAV BLOCKS — three squares that protrude from the front surface
+    // (negative z = toward the viewer) and serve as the navigation. Their layout
+    // is deterministic so they stay put while everything else re-forms.
+    var navDefs = [ {label:'Works',target:'works'}, {label:'CV',target:'cv'}, {label:'Blog',target:'blog'} ];
+    var bw = Math.max(2, Math.floor(Math.min(cols,rows)*0.14));
+    var bH = Math.max(2, Math.floor(bw*0.9));
+    var by = Math.floor(rows*0.42);
+    var nav = navDefs.map(function(d,i){
+      var frac = [0.26,0.5,0.74][i];
+      var bx = Math.round(cols*frac) - Math.floor(bw/2);
+      bx = Math.max(0, Math.min(cols-bw, bx));
+      return { bx:bx, by:by, bw:bw, bh:bw, H:bH, label:d.label, target:d.target };
+    });
+
     cachedBase = null;
-    scene = { gridPct:gridPct, holes:holes, towers:towers };
+    scene = { gridPct:gridPct, holes:holes, towers:towers, nav:nav };
   }
 
   function animateIn(){
@@ -192,6 +220,7 @@
       });
 
       container.innerHTML = buildScene(depths, towerHeights).replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
+      positionNav();
       if(!allDone) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -220,23 +249,47 @@
     if(d && d.type==='blocksColors') applyColors(d);
   });
 
-  // v2 NAV — build the cube-buttons once. Clicking one tells the parent page
-  // which view to route to (handled by the message listener in page.jsx).
-  // stopPropagation keeps the click from also re-shuffling the structure.
-  var NAV = [ {l:'Works',t:'works'}, {l:'CV',t:'cv'}, {l:'Blog',t:'blog'} ];
-  (function buildNav(){
+  // v2 NAV — create the three label chips once. Each one is hung onto a
+  // permanent nav block by positionNav(), and clicking it tells the parent page
+  // which view to route to. stopPropagation keeps the click from also
+  // re-shuffling the structure.
+  var navEls = [];
+  (function buildNavLabels(){
     var navEl = document.getElementById('nav');
     if(!navEl) return;
-    NAV.forEach(function(it){
+    for(var i=0;i<3;i++){
       var b = document.createElement('button');
-      b.className = 'nav-cube'; b.type = 'button'; b.textContent = it.l;
+      b.className = 'nav-cube'; b.type = 'button';
       b.addEventListener('click', function(ev){
         ev.stopPropagation();
-        try{ parent.postMessage({ type:'nav', target:it.t }, '*'); }catch(e){}
+        var t = this.dataset.target;
+        if(t){ try{ parent.postMessage({ type:'nav', target:t }, '*'); }catch(e){} }
       });
-      navEl.appendChild(b);
-    });
+      navEl.appendChild(b); navEls.push(b);
+    }
   })();
+
+  // Map each nav block's projected position (viewBox coords from getVoxelInfo)
+  // to screen pixels, accounting for the SVG's preserveAspectRatio="slice" cover
+  // scaling, and place the matching label chip there.
+  function positionNav(){
+    var svg = container.querySelector('svg');
+    if(!svg || !navAnchors) return;
+    var vb = svg.viewBox.baseVal, rect = svg.getBoundingClientRect();
+    if(!vb.width || !rect.width) return;
+    var scale = Math.max(rect.width/vb.width, rect.height/vb.height);
+    var offX = rect.left + (rect.width - vb.width*scale)/2;
+    var offY = rect.top  + (rect.height - vb.height*scale)/2;
+    for(var i=0;i<navEls.length;i++){
+      var a = navAnchors[i], el = navEls[i];
+      if(!a){ el.classList.remove('ready'); continue; }
+      el.style.left = (offX + (a.x - vb.x)*scale) + 'px';
+      el.style.top  = (offY + (a.y - vb.y)*scale) + 'px';
+      el.textContent = a.label;
+      el.dataset.target = a.target;
+      el.classList.add('ready');
+    }
+  }
 
   init();                       // first form
   setInterval(init, 8000);      // re-form every 8 seconds
