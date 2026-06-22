@@ -259,6 +259,9 @@ export default function Page(){
   const closeReq=()=>{setReqProj(null);setReqStatus("idle");setReqForm({name:"",email:"",company:""})};
   const submitReq=async(e)=>{e.preventDefault();setReqStatus("sending");try{const res=await fetch("https://api.web3forms.com/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_key:W3F_KEY,subject:`Case Study Request: ${reqProj.n}`,from_name:reqForm.name,email:reqForm.email,company:reqForm.company||"Not provided",project:reqProj.n,message:`${reqForm.name} (${reqForm.email})${reqForm.company?` from ${reqForm.company}`:""} requested access to the "${reqProj.n}" case study.`})});if(res.ok)setReqStatus("sent");else setReqStatus("error")}catch{setReqStatus("error")}};
   useEffect(()=>{if(!reqProj)return;const onKey=(e)=>{if(e.key==="Escape")closeReq()};document.addEventListener("keydown",onKey);document.body.style.overflow="hidden";return()=>{document.removeEventListener("keydown",onKey);document.body.style.overflow=""}},[reqProj]);
+  /* v2: the nav cubes live inside the blocks.html iframe (the 3D structure).
+     When one is clicked it postMessages its target up here, and we route. */
+  useEffect(()=>{const onMsg=(e)=>{const d=e.data;if(!d||d.type!=="nav")return;if(d.target==="works")sp();else if(d.target==="cv")nav("cv");else if(d.target==="blog")nav("blog");else if(d.target==="home")nav("home")};window.addEventListener("message",onMsg);return()=>window.removeEventListener("message",onMsg)},[pg]);
   const GF={A:[2,5,7,5,5],B:[6,5,6,5,6],C:[3,4,4,4,3],D:[6,5,5,5,6],E:[7,4,7,4,7],G:[3,4,5,5,3],H:[5,5,7,5,5],I:[7,2,2,2,7],J:[1,1,1,5,2],K:[5,6,4,6,5],L:[4,4,4,4,7],M:[5,7,7,5,5],N:[5,7,5,5,5],P:[6,5,6,4,4],R:[6,5,6,5,5],S:[3,4,2,1,6],T:[7,2,2,2,2],U:[5,5,5,5,7],V:[5,5,5,2,2],Y:[5,5,2,2,2]};
   /* ======================================================================
      HERO GRID PHRASES (the rotating text in the dot grid)
@@ -316,6 +319,8 @@ export default function Page(){
 .pt{transition:opacity .28s,transform .28s;opacity:1;transform:translateY(0)}.pt.out{opacity:0;transform:translateY(8px)}
 .fn{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);border-radius:14px;padding:5px;box-shadow:0 0 0 .5px rgba(128,128,128,0.08),0 4px 16px rgba(0,0,0,0.10),0 12px 40px rgba(0,0,0,0.14);transition:all .5s}
 .r:not(.light) .fn{background:rgba(28,28,28,0.65);border:.5px solid rgba(255,255,255,0.10)}.r.light .fn{background:rgba(255,255,255,0.68);border:.5px solid rgba(0,0,0,0.06)}
+.ctrl{position:fixed;top:16px;right:16px;z-index:400;display:flex;align-items:center;gap:10px;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);border-radius:12px;padding:6px 10px;box-shadow:0 0 0 .5px rgba(128,128,128,0.08),0 4px 16px rgba(0,0,0,0.10),0 12px 40px rgba(0,0,0,0.14);transition:background .5s}
+.r:not(.light) .ctrl{background:rgba(28,28,28,0.65);border:.5px solid rgba(255,255,255,0.10)}.r.light .ctrl{background:rgba(255,255,255,0.68);border:.5px solid rgba(0,0,0,0.06)}
 .fp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s cubic-bezier(.4,0,.2,1)}.fp.o{grid-template-rows:1fr}.fpi{overflow:hidden;min-height:0}.fpc{padding:8px 8px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .3s cubic-bezier(.4,0,.2,1)}.fp.o .fpc{opacity:1;transform:translateY(0);transition:opacity .3s .15s,transform .35s cubic-bezier(.4,0,.2,1) .12s}
 .fpd{height:.5px;background:var(--bd);margin:0 8px;opacity:0;transition:opacity .2s}.fp.o .fpd{opacity:.5;transition:opacity .2s .1s}
 .cg{display:flex;gap:0;background:var(--hb);border-radius:4px;padding:2px;flex-shrink:0}.cb{font-size:11px;font-weight:500;color:var(--f2);background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:3px;transition:color .15s,background .15s;white-space:nowrap}.cb:hover{color:var(--fg)}.cb.a{color:var(--fg);background:var(--la)}
@@ -445,21 +450,17 @@ export default function Page(){
 @media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}.mq{--mq-h:32px;--mq-gap:48px;--mq-fade:40px}}
 @media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}.mq{--mq-gap:40px;--mq-fade:24px}}
       `}</style>
-      <nav className="fn" style={{animation:m?"fi .5s .4s both":"none"}} onMouseLeave={off}>
-        <div className={`fp${ne?" o":""}`}><div className="fpi"><div className="fpc">
-          <div className="cg"><button className={`cb${lang==="EN"?" a":""}`} onClick={()=>sa(()=>setLang("EN"))}>EN</button><button className={`cb cb-de${lang==="DE"?" a":""}`} data-tip="German version coming soon" onClick={()=>sa(()=>setLang("DE"))}>DE</button></div>
-          <div className="tg"><div className="pal-track">
-            <div className="pal-dots">{ANCH.map((a,i)=>{const nearest=ANCH.reduce((best,an,j)=>Math.abs(an.p-sv)<Math.abs(ANCH[best].p-sv)?j:best,0);return <div key={i} className={`pal-anchor${i===nearest?" act":""}`}/>})}</div>
-            <input type="range" className="pal-slider" min="0" max="100" step="0.1" value={sv} onChange={e=>setSv(+e.target.value)} />
-          </div></div>
-        </div></div><div className="fpd"/></div>
-        <div className="ft" ref={tbr}><div className="fb" style={{transform:`translateX(${ind.x}px)`,width:ind.w}}/>
-          <a className={`fl${pg==="home"?" a":""}`} onClick={sp}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Projects</a>
-          <a className={`fl${pg==="cv"?" a":""}`} onClick={()=>nav("cv")}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>CV</a>
-          <a className={`fl${pg==="blog"||pg==="blogPost"?" a":""}`} onClick={()=>nav("blog")}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Blog</a>
-          <div className="fs"/><button className={`tb${ne?" o":""}`} onMouseEnter={on}>+</button>
+      {/* v2: page navigation (Works · CV · Blog) now lives inside the 3D cube
+          structure — see the nav cubes built in /public/blocks.html, which
+          postMessage their target up to the listener in this component. This
+          slim control just keeps the EN/DE toggle and the color slider. */}
+      <div className="ctrl" style={{animation:m?"fi .5s .4s both":"none"}}>
+        <div className="cg"><button className={`cb${lang==="EN"?" a":""}`} onClick={()=>setLang("EN")}>EN</button><button className={`cb cb-de${lang==="DE"?" a":""}`} data-tip="German version coming soon" onClick={()=>setLang("DE")}>DE</button></div>
+        <div className="pal-track">
+          <div className="pal-dots">{ANCH.map((a,i)=>{const nearest=ANCH.reduce((best,an,j)=>Math.abs(an.p-sv)<Math.abs(ANCH[best].p-sv)?j:best,0);return <div key={i} className={`pal-anchor${i===nearest?" act":""}`}/>})}</div>
+          <input type="range" className="pal-slider" min="0" max="100" step="0.1" value={sv} onChange={e=>setSv(+e.target.value)} />
         </div>
-      </nav>
+      </div>
       <div className={`pt${fd?" out":""}`}>
         {pg==="home"&&<>
           <section className="hr">
@@ -501,7 +502,7 @@ export default function Page(){
           </section>
           <section id="projects" className="pd" style={{position:"relative",borderTop:".5px solid var(--bd)"}}><V top={0} left={0}/><V top={0} right={0}/><div className="wh"><span className="wl">Selected works</span><span className="wl">{String(P.length).padStart(2,"0")} projects</span></div></section>
           <div className="pg pd">{P.map(p=><div key={p.id} className="pe" style={{cursor:"pointer"}} onClick={()=>setReqProj(p)}><div className="pc" style={{background:p.c}}>{p.img&&<img className="pci" src={p.img} alt={p.n}/>}{p.vid&&<video className="pcv" src={p.vid} autoPlay loop muted playsInline/>}{!p.img&&p.comp&&<ScaledIframe src={p.comp} title={p.n}/>}<div className="req-ov"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div className="req-label">Request Case Study</div><p className="req-sub">Full process, research, and design outcomes.</p></div></div><div className="pco">{p.co}</div><div className="ptl">{p.tl2}</div><div className="pts">{p.t.map(t=><span key={t} className="ptg">{t}</span>)}</div><div className="req-link">Request case study →</div></div>)}</div>
-          <Marquee/>
+          {/* <Marquee/> — logo roller hidden for v2 (revisit later) */}
           {/* ================================================================
               FOOTER — This footer appears on multiple pages. To update
               your links or copyright, search for "ft2" in this file and
