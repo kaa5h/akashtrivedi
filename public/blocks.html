@@ -177,13 +177,12 @@
     // (negative z = toward the viewer) and serve as the navigation. Their layout
     // is deterministic so they stay put while everything else re-forms.
     var navDefs = [ {label:'Works',target:'works'}, {label:'CV',target:'cv'}, {label:'Blog',target:'blog'} ];
-    var bw = Math.max(2, Math.floor(Math.min(cols,rows)*0.14));
-    var bH = Math.max(2, Math.floor(bw*0.9));
-    var by = Math.floor(rows*0.42);
+    var bw = 1;                      // each nav element is exactly ONE square
+    var bH = 1;                      // protrudes one unit toward the viewer
+    var by = Math.max(0, rows - 2);  // second row from the bottom
     var nav = navDefs.map(function(d,i){
       var frac = [0.26,0.5,0.74][i];
-      var bx = Math.round(cols*frac) - Math.floor(bw/2);
-      bx = Math.max(0, Math.min(cols-bw, bx));
+      var bx = Math.max(0, Math.min(cols-bw, Math.round(cols*frac)));
       return { bx:bx, by:by, bw:bw, bh:bw, H:bH, label:d.label, target:d.target };
     });
 
