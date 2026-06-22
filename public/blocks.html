@@ -47,6 +47,8 @@
   var scene = null;
   var cachedBase = null;
   var navAnchors = null;   // [{target,label,x,y}] projected positions of the nav blocks
+  var fixedViewBox = null; // locked camera frame so the scene (and nav) never drifts
+  var fvbKey = null;       // cols x rows the fixed frame was computed for
 
   function rand(min,max){ return min + Math.floor(Math.random()*(max-min+1)); }
 
@@ -70,8 +72,26 @@
     return e;
   }
 
+  // A fixed camera frame, sized to the full slab at a constant depth so it never
+  // changes between (or during) reforms. With a locked frame, anything at fixed
+  // grid coordinates — i.e. the nav blocks — projects to a fixed screen spot.
+  function computeFixedViewBox(layout){
+    var FRAME_DEPTH = 14;   // >= the deepest random hole so the scene always fits
+    var e = new Heerich({ tile:layout.gridSize, camera:CAMERA, gap:0, style:STYLE });
+    e.applyGeometry({ type:'fill', bounds:[[0,0,0],[layout.cols,layout.rows,FRAME_DEPTH]], test:function(){ return true; } });
+    if(scene && scene.nav){
+      scene.nav.forEach(function(nv){ e.applyGeometry({ type:'box', position:[nv.bx,nv.by,-nv.H], size:[nv.bw,nv.bh,nv.H] }); });
+    }
+    var b = e.getBounds(SVGOPTS.padding || 30);
+    return [b.x, b.y, b.w, b.h];
+  }
+
   function buildScene(depths, towerHeights){
     var layout = getGridLayout();
+    if(!fixedViewBox || fvbKey !== layout.cols+'x'+layout.rows){
+      fixedViewBox = computeFixedViewBox(layout);
+      fvbKey = layout.cols+'x'+layout.rows;
+    }
     var rounded = depths.map(function(d){ return Math.round(d); });
     var maxDepth = Math.max.apply(null, rounded.concat([1]));
 
@@ -121,7 +141,7 @@
       });
     }
 
-    return e.toSVG(SVGOPTS);
+    return e.toSVG({ padding:SVGOPTS.padding, faceAttributes:SVGOPTS.faceAttributes, viewBox:fixedViewBox });
   }
 
   function randomizeScene(){
