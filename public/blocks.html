@@ -200,9 +200,11 @@
     var bw = 1;                      // each nav element is exactly ONE square
     var bH = 1;                      // protrudes one unit toward the viewer
     var by = Math.max(0, rows - 2);  // second row from the bottom
+    var mid = Math.round(cols/2);    // center the cluster
+    var gap = 2;                     // cells between adjacent nav blocks (one empty cell)
+    var offsets = [-gap, 0, gap];
     var nav = navDefs.map(function(d,i){
-      var frac = [0.26,0.5,0.74][i];
-      var bx = Math.max(0, Math.min(cols-bw, Math.round(cols*frac)));
+      var bx = Math.max(0, Math.min(cols-bw, mid + offsets[i]));
       return { bx:bx, by:by, bw:bw, bh:bw, H:bH, label:d.label, target:d.target };
     });
 
