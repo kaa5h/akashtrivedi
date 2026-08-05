@@ -1,5 +1,4 @@
 import './globals.css'
-import InvertingBall from './InvertingBall'
 
 /* ========================================================================
    SITE METADATA (shows in browser tab and search results)
@@ -8,4 +7,4 @@ import InvertingBall from './InvertingBall'
    ======================================================================== */
 export const metadata = { title: 'Akash Trivedi — Product Designer', description: 'Product Designer focused on B2B SaaS, IoT platforms, and AI-driven UX.' }
 
-export default function RootLayout({ children }) { return <html lang="en"><body><InvertingBall />{children}</body></html> }
+export default function RootLayout({ children }) { return <html lang="en"><body>{children}</body></html> }

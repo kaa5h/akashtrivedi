@@ -27,11 +27,39 @@
   var STYLE  = { fill:'var(--fill)', stroke:'var(--stroke-c)', strokeWidth:'var(--stroke-w)' };
   var SVGOPTS = { padding:30, faceAttributes:function(){ return { 'vector-effect':'non-scaling-stroke' }; } };
 
-  var animationId = 0;
+  /* ========================================================================
+     MOTION SETTINGS — safe to tweak
+     =========================================================================
+     The structure never restarts. Every recess and every pillar moves on its
+     OWN clock: it eases to a target, rests a moment, then picks a new target.
+     Because each one draws its own timings from the ranges below, they never
+     line up into a shared rhythm — so the whole thing keeps drifting forward
+     instead of snapping back to a start state.
+
+     Each pair is [fastest, slowest] in milliseconds.
+
+     SMOOTHNESS is the big one. The grid can only draw in whole steps, so a
+     block moves in jumps. RES splits each step into smaller ones — the motion
+     covers the same distance at the same speed, just in finer increments.
+     2 is the sweet spot; 3 is slightly smoother but costs noticeably more.
+     ======================================================================== */
+  var RES         = 2;             // sub-steps per depth unit. Higher = smoother, heavier.
+  var MAX_DEPTH   = 14 * RES;      // slab thickness. Recesses never go past this.
+  var HOLE_MOVE   = [2200, 4800];  // how long a recess takes to sink or rise
+  var HOLE_REST   = [200,  1400];  // how long it pauses before its next move
+  var TOWER_MOVE  = [1100, 2900];  // how long a pillar takes to rise or drop
+  var TOWER_REST  = [150,  1200];  // how long it pauses before its next move
+  var CLOSE_ODDS  = 0.42;          // chance a sunken recess rises back flush
+  var RESHUFFLE   = 0.35;          // chance a flush recess quietly moves elsewhere
+  /* ===================================================================== */
+
   var scene = null;
   var cachedBase = null;
+  var clock = 0, lastFrame = 0, lastKey = '', running = false;
 
   function rand(min,max){ return min + Math.floor(Math.random()*(max-min+1)); }
+  function randF(a,b){ return a + Math.random()*(b-a); }
+  function pick(r){ return randF(r[0], r[1]); }
 
   function getGridLayout(){
     var availW = container.clientWidth, availH = container.clientHeight;
@@ -41,147 +69,197 @@
     return { availW:availW, availH:availH, gridSize:gridSize, cols:cols, rows:rows };
   }
 
-  function buildBaseEngine(layout, maxDepth){
-    var cols = layout.cols, rows = layout.rows;
-    var e = new Heerich({ tile:layout.gridSize, camera:CAMERA, gap:0, style:STYLE });
+  // The slab is always MAX_DEPTH thick, so it only ever gets rebuilt when the
+  // window size changes — not on every frame like before.
+  function buildBaseEngine(layout){
+    // The z tile is RES times thinner, so RES depth steps span the same visual
+    // distance one step used to — same look, finer movement.
+    var e = new Heerich({ tile:[layout.gridSize, layout.gridSize, layout.gridSize/RES],
+                          camera:CAMERA, gap:0, style:STYLE });
     e.applyGeometry({
       type:'fill',
-      bounds:[[0,0,0],[cols,rows,maxDepth]],
+      bounds:[[0,0,0],[layout.cols,layout.rows,MAX_DEPTH]],
       test:function(){ return true; }
     });
-    cachedBase = { engine:e, cols:cols, rows:rows, maxDepth:maxDepth };
-    return e;
+    cachedBase = { json:e.toJSON(), cols:layout.cols, rows:layout.rows, gridSize:layout.gridSize };
+    return cachedBase;
   }
 
-  function buildScene(depths, towerHeights){
+  function buildScene(){
     var layout = getGridLayout();
-    var rounded = depths.map(function(d){ return Math.round(d); });
-    var maxDepth = Math.max.apply(null, rounded.concat([1]));
 
-    if(!cachedBase || cachedBase.cols!==layout.cols || cachedBase.rows!==layout.rows || cachedBase.maxDepth!==maxDepth){
-      buildBaseEngine(layout, maxDepth);
-    } else {
-      cachedBase.engine.setCamera(CAMERA);
+    if(!cachedBase || cachedBase.cols!==layout.cols || cachedBase.rows!==layout.rows || cachedBase.gridSize!==layout.gridSize){
+      buildBaseEngine(layout);
     }
 
-    var base = cachedBase.engine;
-    var e = Heerich.fromJSON(base.toJSON());
+    var e = Heerich.fromJSON(cachedBase.json);
     e.setCamera(CAMERA);
     e.renderOptions.tileW = layout.gridSize;
     e.renderOptions.tileH = layout.gridSize;
 
-    // carve holes (drilling in as depth grows)
-    scene.holes.forEach(function(h,i){
-      var d = Math.round(depths[i]);
+    // carve every recess first, at whatever depth it currently sits at
+    scene.holes.forEach(function(h){
+      var d = Math.round(h.cur);
       if(d>0) e.removeGeometry({ type:'box', position:[h.x,h.y,0], size:[h.w,h.h,d] });
     });
 
-    // raise towers inside the recesses
-    if(towerHeights && scene.towers){
-      scene.towers.forEach(function(tower,idx){
-        var cur = Math.round(towerHeights[idx]);
-        if(cur<=0) return;
-        var holeDepth = Math.round(depths[tower.holeIndex]);
-        var clamped = Math.min(cur, holeDepth);
+    // then raise the pillars standing inside them
+    scene.holes.forEach(function(h){
+      var holeDepth = Math.round(h.cur);
+      if(holeDepth<=0) return;
+      h.towers.forEach(function(t){
+        var clamped = Math.min(Math.round(t.cur), holeDepth);
         if(clamped<=0) return;
         var startZ = holeDepth - clamped;
-        e.applyGeometry({ type:'box', position:[tower.x,tower.y,startZ], size:[tower.w,tower.h,clamped] });
+        e.applyGeometry({ type:'box', position:[t.x,t.y,startZ], size:[t.w,t.h,clamped] });
       });
-    }
+    });
 
     return e.toSVG(SVGOPTS);
   }
 
-  function randomizeScene(){
-    var gridPct = rand(7,11);
-    var availW = container.clientWidth;
-    var gridSize = Math.round((availW*gridPct)/100);
-    var cols = Math.ceil(availW/gridSize);
+  // Gentle sine ease. The old cubic one peaked at twice its average speed,
+  // which made each move stall at both ends and rush through the middle.
+  function ease(t){ return 0.5*(1-Math.cos(Math.PI*t)); }
+
+  // Where a recess heads next. Sunk ones tend to rise back flush with the
+  // surface; flush ones sink again. That swap is what keeps the structure
+  // changing without ever resetting.
+  function nextHoleDepth(prev){
+    if(prev<=0) return rand(5*RES, MAX_DEPTH);
+    return Math.random() < CLOSE_ODDS ? 0 : rand(4*RES, MAX_DEPTH);
+  }
+  function nextTowerHeight(){ return rand(0, MAX_DEPTH-RES); }
+
+  // Moves one block along by a frame. Returns true if it just finished a move
+  // and chose a fresh target.
+  function advance(o, now, move, rest, next){
+    var el = now - o.t0;
+    if(el < 0){ o.cur = o.from; return false; }        // still waiting to set off
+    if(el < o.dur){ o.cur = o.from + (o.to-o.from)*ease(el/o.dur); return false; }
+    o.cur = o.to;
+    if(el < o.dur + o.rest) return false;              // resting on its target
+    o.from = o.to;
+    o.to   = next(o.to);
+    o.t0   = now;
+    o.dur  = pick(move);
+    o.rest = pick(rest);
+    return true;
+  }
+
+  function makeTowers(h, now){
+    var out = [], count = rand(3,6), used = {};
+    for(var t=0;t<count;t++){
+      var tw = Math.max(1, rand(1, Math.max(1, Math.floor(h.w*0.25))));
+      var th = Math.max(1, rand(1, Math.max(1, Math.floor(h.h*0.25))));
+      var margin = Math.max(1, Math.floor(Math.min(h.w,h.h)*0.1));
+      var tx = h.x + rand(margin, Math.max(margin, h.w-margin-tw));
+      var ty = h.y + rand(margin, Math.max(margin, h.h-margin-th));
+      var key = tx+','+ty;
+      if(used[key]) continue;
+      used[key] = 1;
+      out.push({ x:tx, y:ty, w:tw, h:th,
+                 cur:0, from:0, to:rand(RES, MAX_DEPTH-RES),
+                 t0:now+randF(300,2600), dur:pick(TOWER_MOVE), rest:pick(TOWER_REST) });
+    }
+    return out;
+  }
+
+  // Gives a recess a new footprint. Only ever called while it sits flush with
+  // the surface, where it is invisible — so the move is never seen.
+  function placeHole(h, now){
+    var big  = Math.random() < 0.5;
+    var minP = big ? 0.22 : 0.06, maxP = big ? 0.55 : 0.20;
+    h.w = Math.max(2, Math.floor(scene.cols*randF(minP,maxP)));
+    h.h = Math.max(2, Math.floor(scene.rows*randF(minP,maxP)));
+    h.x = rand(0, Math.max(0, scene.cols-h.w));
+    h.y = rand(0, Math.max(0, scene.rows-h.h));
+    h.towers = makeTowers(h, now);
+  }
+
+  function createScene(){
+    var gridPct  = rand(7,11);
+    var gridSize = Math.round((container.clientWidth*gridPct)/100);
+    var cols = Math.ceil(container.clientWidth/gridSize);
     var rows = Math.ceil(container.clientHeight/gridSize);
 
-    var numHoles = rand(3,6);
-    var numSmall = rand(3,6);
-    var holes = [];
-
-    for(var i=0;i<numHoles;i++){
-      var minPct = numHoles===1 ? 0.4 : 0.1;
-      var maxPct = numHoles===1 ? 0.7 : 0.6;
-      var w = Math.max(2, Math.floor(cols*(minPct+Math.random()*(maxPct-minPct))));
-      var h = Math.max(2, Math.floor(rows*(minPct+Math.random()*(maxPct-minPct))));
-      var x = Math.floor(Math.random()*Math.max(1,cols-w));
-      var y = Math.floor(Math.random()*Math.max(1,rows-h));
-      holes.push({ x:x, y:y, w:w, h:h, targetDepth:rand(6,13) });
-    }
-    for(var s=0;s<numSmall;s++){
-      var sw = Math.max(1, Math.floor(cols*(0.05+Math.random()*0.15)));
-      var sh = Math.max(1, Math.floor(rows*(0.05+Math.random()*0.15)));
-      var sx = Math.floor(Math.random()*Math.max(1,cols-sw));
-      var sy = Math.floor(Math.random()*Math.max(1,rows-sh));
-      holes.push({ x:sx, y:sy, w:sw, h:sh, targetDepth:rand(4,9) });
-    }
-
-    var towers = [];
-    holes.forEach(function(h, holeIndex){
-      var numTowers = rand(3,6);
-      var used = {};
-      var tallIdx = rand(0,numTowers-1);
-      for(var t=0;t<numTowers;t++){
-        var tw = Math.max(1, rand(1, Math.floor(h.w*0.25)));
-        var th = Math.max(1, rand(1, Math.floor(h.h*0.25)));
-        var margin = Math.max(1, Math.floor(Math.min(h.w,h.h)*0.1));
-        var tx = h.x + rand(margin, Math.max(margin, h.w-margin-tw));
-        var ty = h.y + rand(margin, Math.max(margin, h.h-margin-th));
-        var key = tx+','+ty;
-        if(used[key]) continue;
-        used[key]=1;
-        var isTall = (t===tallIdx);
-        var maxH = isTall ? h.targetDepth : Math.floor(h.targetDepth*0.8);
-        var targetHeight = rand(Math.floor(h.targetDepth*0.3), maxH);
-        towers.push({ x:tx, y:ty, w:tw, h:th, holeIndex:holeIndex, targetHeight:targetHeight });
-      }
-    });
-
+    scene = { gridPct:gridPct, cols:cols, rows:rows, holes:[] };
     cachedBase = null;
-    scene = { gridPct:gridPct, holes:holes, towers:towers };
-  }
+    lastKey = '';
 
-  function animateIn(){
-    var id = ++animationId;
-    var holeTargets  = scene.holes.map(function(h){ return h.targetDepth; });
-    var towerTargets = scene.towers.map(function(t){ return t.targetHeight; });
-    var holeDuration=800, holeStagger=200, towerDuration=600, towerStagger=80;
-    var startTime = performance.now();
-    var holeEnd = holeDuration + (scene.holes.length-1)*holeStagger;
-    var towerStart = holeEnd + 200;
-
-    function ease(t){ return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
-
-    function step(now){
-      if(id!==animationId) return;
-      var allDone = true;
-
-      var depths = holeTargets.map(function(target,i){
-        var el = now - startTime - i*holeStagger;
-        if(el<=0){ allDone=false; return 0; }
-        if(el>=holeDuration) return target;
-        allDone=false; return target*ease(el/holeDuration);
-      });
-      var towerHeights = towerTargets.map(function(target,i){
-        var el = now - startTime - towerStart - i*towerStagger;
-        if(el<=0){ allDone=false; return 0; }
-        if(el>=towerDuration) return target;
-        allDone=false; return target*ease(el/towerDuration);
-      });
-
-      container.innerHTML = buildScene(depths, towerHeights).replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
-      if(!allDone) requestAnimationFrame(step);
+    var n = rand(6,9);
+    for(var i=0;i<n;i++){
+      var h = { cur:0, from:0, to:0, t0:0, dur:1, rest:0, towers:[] };
+      placeHole(h, clock);
+      h.to   = rand(5*RES, MAX_DEPTH);
+      h.t0   = clock + i*260;          // staggered so it emerges rather than pops in
+      h.dur  = pick(HOLE_MOVE);
+      h.rest = pick(HOLE_REST);
+      scene.holes.push(h);
     }
-    requestAnimationFrame(step);
   }
 
-  function init(){ randomizeScene(); animateIn(); }
+  // The voxel grid only renders in whole steps, so redrawing is pointless until
+  // a rounded value actually changes. This key tells us when that happens.
+  function signature(){
+    var s = '';
+    for(var i=0;i<scene.holes.length;i++){
+      var h = scene.holes[i];
+      s += h.x+','+h.y+','+h.w+','+h.h+','+Math.round(h.cur)+'|';
+      for(var j=0;j<h.towers.length;j++){
+        var t = h.towers[j];
+        s += t.x+','+t.y+','+t.w+','+t.h+','+Math.round(t.cur)+';';
+      }
+      s += '#';
+    }
+    return s;
+  }
 
-  container.addEventListener('click', init);
+  function frame(ts){
+    if(!lastFrame) lastFrame = ts;
+    var dt = ts - lastFrame;
+    lastFrame = ts;
+    if(dt > 120) dt = 120;               // tab was in the background: don't fast-forward
+    if(!document.hidden) clock += dt;
+
+    for(var i=0;i<scene.holes.length;i++){
+      var h = scene.holes[i];
+      var retargeted = advance(h, clock, HOLE_MOVE, HOLE_REST, nextHoleDepth);
+      if(retargeted && h.from===0 && Math.random() < RESHUFFLE) placeHole(h, clock);
+      for(var j=0;j<h.towers.length;j++){
+        advance(h.towers[j], clock, TOWER_MOVE, TOWER_REST, nextTowerHeight);
+      }
+    }
+
+    var key = signature();
+    if(key !== lastKey && !document.hidden){
+      lastKey = key;
+      container.innerHTML = buildScene().replace('<svg ', '<svg preserveAspectRatio="xMidYMid slice" ');
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // A click stirs things up: every block heads somewhere new from exactly where
+  // it stands. Still no reset.
+  function stir(){
+    for(var i=0;i<scene.holes.length;i++){
+      var h = scene.holes[i];
+      h.from = h.cur; h.to = nextHoleDepth(Math.round(h.cur));
+      h.t0 = clock + i*90; h.dur = pick(HOLE_MOVE); h.rest = pick(HOLE_REST);
+      for(var j=0;j<h.towers.length;j++){
+        var t = h.towers[j];
+        t.from = t.cur; t.to = nextTowerHeight();
+        t.t0 = clock + randF(0,600); t.dur = pick(TOWER_MOVE); t.rest = pick(TOWER_REST);
+      }
+    }
+  }
+
+  function init(){
+    createScene();
+    if(!running){ running = true; requestAnimationFrame(frame); }
+  }
+
+  container.addEventListener('click', stir);
   var rt;
   window.addEventListener('resize', function(){ clearTimeout(rt); rt=setTimeout(init,200); });
 
@@ -202,7 +280,6 @@
     if(d && d.type==='blocksColors') applyColors(d);
   });
 
-  init();                       // first form
-  setInterval(init, 8000);      // re-form every 8 seconds
+  init();                       // starts the endless loop; nothing ever restarts it
 })();
 </script>
