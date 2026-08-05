@@ -61,11 +61,20 @@
   function randF(a,b){ return a + Math.random()*(b-a); }
   function pick(r){ return randF(r[0], r[1]); }
 
+  /* FRAMING
+     The cube size is chosen so a whole number of rows fills the height exactly.
+     That puts the bottom row flush with the frame instead of slicing it in half,
+     which is what made the old version look accidentally cropped.
+
+     The structure then runs past the right edge, and its top faces lean up past
+     the top edge. Bleeding off those two sides is deliberate — it reads as a
+     wall that carries on beyond the frame. Bottom and left stay clean. */
   function getGridLayout(){
     var availW = container.clientWidth, availH = container.clientHeight;
-    var gridSize = Math.round((availW * scene.gridPct)/100);
-    var cols = Math.ceil(availW/gridSize);
-    var rows = Math.ceil(availH/gridSize);
+    var target   = (availW * scene.gridPct)/100;        // the cube size we'd like
+    var rows     = Math.max(3, Math.round(availH/target));
+    var gridSize = availH/rows;                          // whole rows, exact height
+    var cols     = Math.ceil(availW/gridSize) + 1;       // +1 so the right edge always bleeds
     return { availW:availW, availH:availH, gridSize:gridSize, cols:cols, rows:rows };
   }
 
@@ -115,7 +124,11 @@
       });
     });
 
-    return e.toSVG(SVGOPTS);
+    // Pin the frame to the container rectangle rather than letting it be derived
+    // from the geometry. One SVG unit is one pixel, so nothing is scaled or
+    // re-centred: the front face sits exactly where we put it.
+    return e.toSVG({ viewBox:[0, 0, layout.availW, layout.availH],
+                     faceAttributes:SVGOPTS.faceAttributes });
   }
 
   // Gentle sine ease. The old cubic one peaked at twice its average speed,
@@ -178,12 +191,12 @@
   }
 
   function createScene(){
-    var gridPct  = rand(7,11);
-    var gridSize = Math.round((container.clientWidth*gridPct)/100);
-    var cols = Math.ceil(container.clientWidth/gridSize);
-    var rows = Math.ceil(container.clientHeight/gridSize);
-
-    scene = { gridPct:gridPct, cols:cols, rows:rows, holes:[] };
+    // Lay the scene out with the very same grid the renderer uses, so hole
+    // positions and the drawn frame can never disagree.
+    scene = { gridPct:rand(7,11), cols:1, rows:1, holes:[] };
+    var layout = getGridLayout();
+    scene.cols = layout.cols;
+    scene.rows = layout.rows;
     cachedBase = null;
     lastKey = '';
 
