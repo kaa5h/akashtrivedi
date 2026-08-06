@@ -3,10 +3,37 @@
 Everything you need to edit lives in **one file**:
 
 ```
-src/app/page.jsx
+src/app/content.js
 ```
 
 Open it in any text editor (VS Code, TextEdit, etc). Look for the big comment blocks — they tell you exactly what to do.
+
+This file holds only your **content** — your projects and blog posts. There's no layout or styling code in it, so you can edit it freely without breaking how the site looks. (The design lives in `src/app/Site.jsx`, which you don't normally need to touch.)
+
+## Web addresses
+
+Every blog post gets its own link automatically, based on its title:
+
+```
+"The Retro We Never Scheduled"  →  akash-trivedi.com/blog/the-retro-we-never-scheduled
+```
+
+You don't have to do anything to set this up — add a post and its link exists. The blog list is at `/blog` and your CV is at `/cv`.
+
+⚠️ **If you rename a post, its link changes too.** Anyone who saved or shared the old link will get a "page not found". So avoid retitling posts you've already shared.
+
+### Text formatting in blog posts
+
+Inside a post's `bd` (body) field, these work:
+
+| You write | You get |
+|---|---|
+| `\n\n` | A new paragraph |
+| `## Some heading` | A section heading |
+| `**some text**` | **Bold** |
+| `[label](https://url)` | A link |
+| `---` on its own | A short divider line |
+| `*text in single stars*` | Small italic note (good for a source citation) |
 
 ---
 
@@ -14,7 +41,7 @@ Open it in any text editor (VS Code, TextEdit, etc). Look for the big comment bl
 
 ### Add a Blog Post
 
-1. Open `src/app/page.jsx`
+1. Open `src/app/content.js`
 2. Find the comment block `BLOG POSTS`
 3. Copy an existing blog post block (everything between `{` and `},`)
 4. Paste it right after the line `/* ADD NEW BLOG POST HERE (newest first) */`
