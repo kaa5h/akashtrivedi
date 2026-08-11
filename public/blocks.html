@@ -5,7 +5,10 @@
     --bg:transparent;
     --fill:#111111;
     --stroke-c:#b0b0b0;
-    --stroke-w:0.5;
+    /* Outline thickness of the blocks, in screen pixels (the faces use
+       non-scaling-stroke, so this stays the same weight at any size).
+       0.5 = hairline · 1.25 = current · 2 = heavy. Change this one number. */
+    --stroke-w:1.25;
   }
   html,body{ height:100%; margin:0; background:var(--bg); }
   #hero{ position:fixed; inset:0; overflow:hidden; cursor:pointer; }
@@ -61,21 +64,45 @@
   function randF(a,b){ return a + Math.random()*(b-a); }
   function pick(r){ return randF(r[0], r[1]); }
 
+  /* SIDEWAYS LEAN
+     The camera is oblique, so depth pushes each step to the right. A block sunk
+     to the full slab depth therefore reaches BLEED_X pixels further right than
+     the front face it belongs to — that overhang is what used to get sliced by
+     the right edge. The amount depends only on the camera and RES, so it is the
+     same number of pixels on every screen. */
+  var DEPTH_X = Math.abs(Math.cos(CAMERA.angle*Math.PI/180) * CAMERA.distance / RES);
+  var BLEED_X = MAX_DEPTH * DEPTH_X;
+
   /* FRAMING
      The cube size is chosen so a whole number of rows fills the height exactly.
      That puts the bottom row flush with the frame instead of slicing it in half,
      which is what made the old version look accidentally cropped.
 
-     The structure then runs past the right edge, and its top faces lean up past
-     the top edge. Bleeding off those two sides is deliberate — it reads as a
-     wall that carries on beyond the frame. Bottom and left stay clean. */
+     Columns work the same way: the grid stops at the last block that fits
+     COMPLETELY, counting the sideways lean above, so no square is ever cut in
+     half by the right edge. Whole rows pin the height exactly, so the only
+     freedom left is HOW MANY rows — we try a few counts and keep the one that
+     leaves the least empty strip on the right. Top still bleeds upward, which
+     is deliberate: it reads as a wall carrying on beyond the frame. */
   function getGridLayout(){
     var availW = container.clientWidth, availH = container.clientHeight;
-    var target   = (availW * scene.gridPct)/100;        // the cube size we'd like
-    var rows     = Math.max(3, Math.round(availH/target));
-    var gridSize = availH/rows;                          // whole rows, exact height
-    var cols     = Math.ceil(availW/gridSize) + 1;       // +1 so the right edge always bleeds
-    return { availW:availW, availH:availH, gridSize:gridSize, cols:cols, rows:rows };
+    var target  = (availW * scene.gridPct)/100;         // the cube size we'd like
+    var usableW = Math.max(target, availW - BLEED_X);   // width the front face may occupy
+    var base    = Math.max(3, Math.round(availH/target));
+    var best    = null;
+
+    for(var r=Math.max(3, base-1); r<=base+1; r++){
+      var g = availH/r;                                  // whole rows, exact height
+      var c = Math.floor(usableW/g);                     // only blocks that fit entirely
+      if(c < 3) continue;
+      var gap = usableW - c*g;                           // empty strip left at the right
+      if(!best || gap < best.gap) best = { gridSize:g, cols:c, rows:r, gap:gap };
+    }
+    if(!best){                                           // very small frames: keep it sane
+      var g0 = availH/base;
+      best = { gridSize:g0, cols:Math.max(1, Math.floor(usableW/g0)), rows:base };
+    }
+    return { availW:availW, availH:availH, gridSize:best.gridSize, cols:best.cols, rows:best.rows };
   }
 
   // The slab is always MAX_DEPTH thick, so it only ever gets rebuilt when the
