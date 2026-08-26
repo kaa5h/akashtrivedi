@@ -1,2 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap');
+/* Always keep room for the scrollbar, even on pages short enough not to need
+   one. Without this, a short page (the Blog list) hides the scrollbar while a
+   long one (Home, CV) shows it, the usable width changes by a few pixels, and
+   every centred column on the site jumps sideways as you move between them. */
+html { overflow-y: scroll; scrollbar-gutter: stable; }
 html, body { margin: 0; padding: 0; background: #2C2C2C; transition: background 0.5s; }

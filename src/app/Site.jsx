@@ -1,6 +1,37 @@
 "use client"
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment, cloneElement, isValidElement } from "react";
 import { P, BL, blogSlug, pathFor, viewFor } from "./content";
+/* ==========================================================================
+   WORD-BY-WORD REVEAL
+   ==========================================================================
+   Wraps every word of the hero copy in its own span so the text can arrive
+   one word at a time, front to back, instead of the whole block landing at
+   once. Each span carries its own start time, a hair after the one before.
+
+   It walks the copy rather than just splitting a string, because the first
+   tab has real elements inside it — the name, the Cybus link — and those
+   have to survive intact. Spaces are left as plain text so the paragraph
+   still wraps and breaks exactly where it did.
+
+   STEP is the gap between one word and the next, in seconds. Bigger = the
+   line unrolls more slowly. Past about 0.03 it starts to feel like typing.
+   ========================================================================== */
+const WORD_STEP = 0.016;
+const WORD_LEAD = 0.10;   /* how long before the first word starts */
+
+function splitWords(node, ctr){
+  if(typeof node === "string"){
+    /* keep the whitespace tokens: they're what lets the line still wrap */
+    return node.split(/(\s+)/).map((tok, i) => tok.trim()
+      ? <span key={i} className="wd" style={{animationDelay:`${(WORD_LEAD + ctr.n++ * WORD_STEP).toFixed(3)}s`}}>{tok}</span>
+      : tok);
+  }
+  if(Array.isArray(node)) return node.map((c, i) => <Fragment key={i}>{splitWords(c, ctr)}</Fragment>);
+  if(isValidElement(node)) return cloneElement(node, {}, splitWords(node.props.children, ctr));
+  return node;
+}
+const Words = ({children}) => <>{splitWords(children, {n:0})}</>;
+
 /* Get your free key at web3forms.com (enter your email → copy the key) */
 const W3F_KEY="b319f9e4-4fd2-4272-a8c6-f5a5712e25fb";
 
@@ -267,7 +298,7 @@ export default function Page({initial}){
       <div ref={gifRef} className={`hni${nh?" s":""}`}><img src="/videos/hover-face.gif" alt="Akash Trivedi" width={140} height={140}/></div>
       <style>{`
 
-.r{min-height:100vh;background:var(--bg);color:var(--fg);font-family:'Geist',sans-serif;overflow-x:hidden}
+.r{min-height:100vh;background:var(--bg);color:var(--fg);font-family:'Geist',sans-serif;overflow-x:hidden;overflow-x:clip}
 *{margin:0;padding:0;box-sizing:border-box}
 ::selection{background:rgba(168,218,220,0.2);color:var(--fg)}
 @keyframes fi{from{opacity:0}to{opacity:1}}@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -295,9 +326,9 @@ export default function Page({initial}){
 .fs{width:.5px;height:14px;background:var(--bd);margin:0 4px;position:relative;z-index:1;flex-shrink:0;opacity:.6}
 .tb{position:relative;z-index:1;width:30px;height:30px;border:none;border-radius:50%;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--f3);font-size:15px;font-weight:300;transition:color .25s,transform .35s cubic-bezier(.16,1,.3,1);flex-shrink:0}.tb:hover{color:var(--fg)}.tb.o{transform:rotate(45deg)}
 .pd{padding-left:clamp(16px,3.2vw,32px);padding-right:clamp(16px,3.2vw,32px)}
-.hr{height:100vh;display:flex;flex-direction:column;background:var(--hg);transition:background .35s;position:relative;overflow:hidden;padding:0}
+.hr{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--hg);transition:background .35s;position:relative;overflow:hidden;padding:clamp(24px,5vh,64px) clamp(16px,3.2vw,32px)}
 .tgr{flex:1;display:grid;gap:4px;min-height:0;overflow:hidden;padding:clamp(8px,1.5vw,16px)}
-.bvw{flex:1;min-height:0;overflow:hidden;padding:0}
+.bvw{flex:none;width:clamp(190px,17vw,240px);aspect-ratio:3/2;overflow:hidden;padding:0;margin-bottom:clamp(64px,10vh,128px)}
 .bvw iframe{width:100%;height:100%;border:none;display:block;background:transparent}
 .hview-wrap{position:absolute;right:clamp(16px,3.2vw,32px);bottom:clamp(16px,3.2vw,32px);z-index:6;display:flex;align-items:center;gap:10px}
 .hview{position:relative;backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
@@ -307,7 +338,7 @@ export default function Page({initial}){
 .hview-arrow{display:inline-block;animation:hintNudge 1.4s ease-in-out infinite}
 @keyframes hintNudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
 @keyframes hintIn{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:translateX(0)}}
-.hr-bot{flex-shrink:0;min-height:280px;padding:16px clamp(16px,3.2vw,32px) 80px;display:flex;flex-direction:column;justify-content:flex-start;position:relative}
+.hr-bot{flex:none;width:100%;padding:0;display:flex;flex-direction:column;align-items:center;position:relative}
 .tgc{width:100%;height:100%;border-radius:9999px;position:relative;cursor:pointer;transition:background .45s cubic-bezier(.4,0,.2,1),transform .15s ease,box-shadow .3s ease,border-color .3s;border:1px solid rgba(128,128,128,0.2)}
 .tgc.off{background:rgba(255,255,255,0.06)}
 .tgc.on{background:#3B82F6;border-color:rgba(59,130,246,0.5)}
@@ -322,15 +353,26 @@ export default function Page({initial}){
 .tgc.nm{cursor:default}
 @keyframes namePulse{0%,100%{opacity:1}50%{opacity:0.7}}
 .tgc.nm{animation:namePulse 3s ease-in-out infinite}
-.hr-bot{flex-shrink:0;padding-top:clamp(12px,2vw,24px)}
-.htabs{display:flex;flex-wrap:wrap;gap:clamp(12px,2vw,24px);margin-bottom:clamp(12px,1.5vw,20px)}
+.htabs{display:flex;flex-wrap:wrap;justify-content:center;width:100%;gap:clamp(14px,2vw,26px);margin-bottom:clamp(20px,3vh,34px)}
 .htab{font-size:clamp(12px,1.2vw,14px);font-weight:400;color:var(--f3);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;position:relative;transition:color .3s}.htab:hover{color:var(--fg)}
 .htab.a{color:var(--fg);font-weight:500}
-.htxt{max-width:50%;display:grid}
-.htxt-item{grid-area:1/1;transition:opacity .3s,transform .3s cubic-bezier(.4,0,.2,1)}
-.htxt-item.hide{opacity:0;transform:translateY(4px);pointer-events:none}
-.htxt-item.show{opacity:1;transform:translateY(0)}
-.htxt-item p{font-size:clamp(18px,2.5vw,24px);font-weight:400;color:var(--fg);line-height:1.45;letter-spacing:-.015em;margin:0}
+.htxt{width:100%;max-width:520px;display:grid;text-align:center}
+.htxt-item{grid-area:1/1;transform-origin:50% 50%;will-change:opacity,filter,transform;backface-visibility:hidden;-webkit-font-smoothing:antialiased}
+.htxt-item.hide{opacity:0;filter:blur(6px);transform:scale(1.035);pointer-events:none;transition:opacity .42s cubic-bezier(.4,0,.2,1),filter .42s cubic-bezier(.4,0,.2,1),transform .42s cubic-bezier(.4,0,.2,1)}
+.htxt-item.show{opacity:1;filter:blur(0);transform:scale(1);transition:opacity .4s cubic-bezier(.22,1,.36,1) .06s,filter .45s cubic-bezier(.22,1,.36,1) .06s,transform .9s cubic-bezier(.22,1,.36,1) .06s}
+/* Each word rises into place a hair after the one before it, so the copy
+   unrolls from the first word to the last instead of landing all at once.
+   Every word does its own focus pull — it arrives out of focus and slightly
+   enlarged, then sharpens. It has to be per word: a blur on the whole block
+   would have resolved long before the last words arrived.
+   The delay per word is set on the span itself (see splitWords up top). The
+   animation only exists while the block is shown, which is what makes it
+   run again every time you switch tabs. */
+.wd{display:inline-block}
+.htxt-item.show .wd{animation:wdIn .62s cubic-bezier(.22,1,.36,1) both}
+@keyframes wdIn{from{opacity:0;filter:blur(9px);transform:translateY(.42em) scale(1.06)}to{opacity:1;filter:blur(0);transform:none}}
+@media(prefers-reduced-motion:reduce){.htxt-item.hide,.htxt-item.show{filter:none;transform:none;transition:opacity .2s ease}.htxt-item.show .wd{animation:none}}
+.htxt-item p{font-size:clamp(16px,1.45vw,20px);font-weight:400;color:var(--fg);line-height:1.55;letter-spacing:-.01em;margin:0}
 .hn{font-weight:500;position:relative;display:inline;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s;cursor:default}.hn:hover{border-color:var(--fg)}
 .hn-link{color:var(--fg);text-decoration:none;border-bottom:1.5px solid var(--f3);padding-bottom:1px;transition:border-color .3s,color .3s}.hn-link:hover{border-color:var(--tl);color:var(--tl)}
 .hni{position:fixed;top:0;left:0;width:140px;height:140px;opacity:0;pointer-events:none;z-index:9999;transition:opacity .25s ease,transform .05s;will-change:transform,opacity}.hni.s{opacity:1}
@@ -370,18 +412,18 @@ export default function Page({initial}){
 .rm-done-s{font-size:13px;color:var(--f2);line-height:1.6;margin:0 0 24px;max-width:300px}
 .rm-done-btn{font-size:13px;font-family:inherit;color:var(--f2);background:var(--hb);border:.5px solid var(--bd);border-radius:8px;padding:10px 24px;cursor:pointer;transition:background .2s}.rm-done-btn:hover{background:var(--la)}
 .np{border-top:.5px solid var(--bd);padding-top:32px;cursor:pointer;position:relative}.npl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--f4);margin-bottom:8px;font-weight:500}.npn{font-size:clamp(20px,3vw,32px);font-weight:500;color:var(--f3);letter-spacing:-.02em;transition:color .3s;display:inline-flex;align-items:center;gap:12px}.np:hover .npn{color:var(--fg)}.npa{transition:transform .3s cubic-bezier(.16,1,.3,1);display:inline-block;font-size:.7em}.np:hover .npa{transform:translateX(6px)}
-.cvp{padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.cvh{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start;margin-bottom:clamp(36px,5vw,56px)}.cvt{font-size:clamp(32px,5vw,48px);font-weight:500;color:var(--fg);letter-spacing:-.03em;margin-bottom:4px}.cvst{font-size:15px;color:var(--f2)}
+.cvp{max-width:720px;margin-left:auto;margin-right:auto;padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.cvh{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start;margin-bottom:clamp(36px,5vw,56px)}.cvt{font-size:clamp(32px,5vw,48px);font-weight:500;color:var(--fg);letter-spacing:-.03em;margin-bottom:4px}.cvst{font-size:15px;color:var(--f2)}
 .cvph{width:120px;height:120px;border-radius:8px;background:var(--cd);border:.5px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0}.cvphl{font-size:10px;color:var(--f4);text-transform:uppercase}
 .cvpr{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:clamp(36px,5vw,56px);padding:20px 0;border-top:.5px solid var(--bd);border-bottom:.5px solid var(--bd);position:relative}.cvpl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--f4);margin-bottom:4px;font-weight:500}.cvpv{font-size:13px;color:var(--f2)}.cvpk{font-size:13px;color:var(--tl);text-decoration:none;cursor:pointer}
 .cvs{margin-bottom:clamp(40px,5vw,60px)}.cvsl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--tl);font-weight:500;margin-bottom:24px}.cve{display:grid;grid-template-columns:160px 1fr;gap:24px;padding:20px 0;border-top:.5px solid var(--bd);position:relative}.cve:last-child{border-bottom:.5px solid var(--bd)}.cvep{font-size:12px;color:var(--f3);padding-top:3px;font-variant-numeric:tabular-nums}.cver{font-size:15px;font-weight:500;color:var(--fg);margin-bottom:3px}.cvec{font-size:13px;color:var(--f2);margin-bottom:2px}.cved{font-size:13px;color:var(--f2);line-height:1.65}
 .cvsk{margin-bottom:clamp(40px,5vw,60px)}.cvsg{display:grid;grid-template-columns:1fr 1fr;gap:24px}.cvskc{font-size:12px;font-weight:500;color:var(--fg);margin-bottom:10px}.cvski{font-size:13px;color:var(--f2);line-height:1.9}
 .cva{display:flex;gap:12px;flex-wrap:wrap}.cvdl{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--tl);cursor:pointer;transition:background .2s;border:.5px solid var(--ht);border-radius:8px;padding:10px 18px;text-decoration:none;font-weight:500}.cvdl:hover{background:var(--hb)}.cvcb{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--f2);cursor:pointer;transition:background .2s;border:.5px solid var(--bd);border-radius:8px;padding:10px 18px;text-decoration:none}.cvcb:hover{background:var(--hb)}
 .wip-dl{cursor:not-allowed;opacity:.45;position:relative}.wip-dl:hover{background:none}
-.blp{padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.blt{font-size:clamp(32px,5vw,48px);font-weight:500;color:var(--fg);letter-spacing:-.03em;margin-bottom:12px}.bls{font-size:15px;color:var(--f2);line-height:1.6;max-width:560px;margin-bottom:clamp(36px,5vw,56px)}
+.blp{max-width:720px;margin-left:auto;margin-right:auto;padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.blt{font-size:clamp(32px,5vw,48px);font-weight:500;color:var(--fg);letter-spacing:-.03em;margin-bottom:12px}.bls{font-size:15px;color:var(--f2);line-height:1.6;max-width:560px;margin-bottom:clamp(36px,5vw,56px)}
 .bll{display:flex;flex-direction:column}.ble{display:flex;align-items:baseline;justify-content:space-between;padding:18px 0;border-bottom:.5px solid var(--bd);cursor:pointer;transition:background .2s;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px;gap:16px}.ble:first-child{border-top:.5px solid var(--bd)}.ble:hover{background:var(--hb)}
 .blel{flex:1;min-width:0}.blet{font-size:16px;font-weight:500;color:var(--fg);line-height:1.4;margin-bottom:6px;transition:color .2s}.ble:hover .blet{color:var(--tl)}.bleg{display:flex;gap:6px;flex-wrap:wrap}.blegt{font-size:10px;font-weight:500;color:var(--f3);border:.5px solid var(--tb);border-radius:100px;padding:2px 10px;text-transform:uppercase}
 .bler{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}.bled{font-size:12px;color:var(--f3)}.blerm{font-size:11px;color:var(--f4)}
-.bpp{padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.bph{margin-bottom:clamp(44px,5.5vw,72px)}.bptr{display:flex;gap:8px;margin-bottom:16px}.bptg{font-size:10px;font-weight:500;color:var(--tl);border:.5px solid var(--ht);border-radius:100px;padding:3px 12px;text-transform:uppercase}.bpti{font-size:clamp(26px,4vw,42px);font-weight:500;color:var(--fg);letter-spacing:-.025em;line-height:1.2;margin-bottom:16px;max-width:720px}.bpm{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--f3)}.bpmd{opacity:.4}
+.bpp{max-width:720px;margin-left:auto;margin-right:auto;padding-top:clamp(16px,3.2vw,32px);padding-bottom:80px;min-height:100vh}.bph{margin-bottom:clamp(44px,5.5vw,72px)}.bptr{display:flex;gap:8px;margin-bottom:16px}.bptg{font-size:10px;font-weight:500;color:var(--tl);border:.5px solid var(--ht);border-radius:100px;padding:3px 12px;text-transform:uppercase}.bpti{font-size:clamp(26px,4vw,42px);font-weight:500;color:var(--fg);letter-spacing:-.025em;line-height:1.2;margin-bottom:16px;max-width:720px}.bpm{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--f3)}.bpmd{opacity:.4}
 .bpbd{max-width:640px;margin-bottom:clamp(48px,6vw,72px)}.bppr{font-size:15px;color:var(--f2);line-height:1.8;margin-bottom:24px}.bppr:last-child{margin-bottom:0}
 .bpsh{font-size:clamp(17px,2vw,20px);font-weight:500;color:var(--fg);letter-spacing:-.015em;line-height:1.35;margin:44px 0 18px}.bpsh:first-child{margin-top:0}.bpb{font-weight:500;color:var(--fg)}.bpl{color:var(--fg);text-decoration:none;border-bottom:.5px solid var(--ht);transition:border-color .2s}.bpl:hover{border-bottom-color:var(--fg)}.bphr{height:1px;width:48px;background:var(--vertex);margin:48px 0 28px}.bpci{font-size:13px;color:var(--f3);line-height:1.7;font-style:italic}
 .bpn{border-top:.5px solid var(--bd);padding-top:32px;cursor:pointer;position:relative}.bpnl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--f4);margin-bottom:8px;font-weight:500}.bpnt{font-size:clamp(17px,2.5vw,24px);font-weight:500;color:var(--f3);line-height:1.35;transition:color .3s;display:inline-flex;align-items:center;gap:10px;max-width:560px}.bpn:hover .bpnt{color:var(--fg)}.bpna{transition:transform .3s cubic-bezier(.16,1,.3,1);display:inline-block;font-size:.8em;flex-shrink:0}.bpn:hover .bpna{transform:translateX(5px)}
@@ -400,9 +442,9 @@ export default function Page({initial}){
 .mq-viewport:hover .mq-track{animation-play-state:paused}
 @keyframes mq-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){.mq-track{animation:none}}
-@media(max-width:1024px){.htxt{max-width:70%}.tgr{display:none}.bvw{display:none}.hview-wrap{display:none}.hr{height:auto;min-height:auto;overflow:visible;padding:clamp(16px,3.2vw,32px)}.hr-bot{padding:0;min-height:auto;height:auto;position:static}.hni{display:none}.hn{border-bottom:none;padding-bottom:0}}
-@media(max-width:768px){.htxt{max-width:85%}.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}.mq{--mq-h:32px;--mq-gap:48px;--mq-fade:40px}}
-@media(max-width:540px){.htxt{max-width:100%}.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}.mq{--mq-gap:40px;--mq-fade:24px}}
+@media(max-width:1024px){.tgr{display:none}.hview-wrap{display:none}.hr{height:auto;min-height:100vh;overflow:visible;padding:clamp(64px,12vh,120px) clamp(16px,3.2vw,32px)}.bvw{margin-bottom:clamp(48px,8vh,96px)}.hni{display:none}.hn{border-bottom:none;padding-bottom:0}}
+@media(max-width:768px){.pg{grid-template-columns:1fr 1fr}.cve{grid-template-columns:120px 1fr;gap:16px}.cvpr{grid-template-columns:repeat(2,1fr)}.tgr{gap:3px}.mq{--mq-h:32px;--mq-gap:48px;--mq-fade:40px}}
+@media(max-width:540px){.pg{grid-template-columns:1fr}.cve{grid-template-columns:1fr;gap:8px}.cvpr{grid-template-columns:1fr 1fr}.pig{grid-template-columns:1fr}.cvsg{grid-template-columns:1fr}.tgr{gap:2px}.mq{--mq-gap:40px;--mq-fade:24px}}
       `}</style>
       <nav className="fn" style={{animation:m?"fi .5s .4s both":"none"}} onMouseLeave={off}>
         <div className={`fp${ne?" o":""}`}><div className="fpi"><div className="fpc">
@@ -453,7 +495,7 @@ export default function Page({initial}){
               </div>
               <div className="htxt">
                 {TABS.map((t,i)=><div key={i} className={`htxt-item${htab===i?" show":" hide"}`}>
-                  <p>{i===0?<>I'm <span className="hn" onMouseEnter={()=>setNh(true)} onMouseLeave={()=>setNh(false)}>Akash Trivedi</span>, a Product Designer at <a href="https://cybus.io" target="_blank" rel="noopener noreferrer" className="hn-link">Cybus</a>, where I get to work on some genuinely interesting problems in industrial IoT. My days are spent making complex B2B tools feel straightforward — and more recently, figuring out what good AI-driven UX actually looks like in practice.</>:t.t}</p>
+                  <p><Words>{i===0?<>I'm <span className="hn" onMouseEnter={()=>setNh(true)} onMouseLeave={()=>setNh(false)}>Akash Trivedi</span>, a Product Designer at <a href="https://cybus.io" target="_blank" rel="noopener noreferrer" className="hn-link">Cybus</a>, where I get to work on some genuinely interesting problems in industrial IoT. My days are spent making complex B2B tools feel straightforward — and more recently, figuring out what good AI-driven UX actually looks like in practice.</>:t.t}</Words></p>
                 </div>)}
               </div>
             </div>
