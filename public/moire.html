@@ -1,0 +1,785 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  html,body{ height:100%; margin:0; background:transparent; overflow:hidden; }
+  #hero{ position:fixed; inset:0; cursor:pointer; }
+  #hero canvas{ display:block; width:100%; height:100%; }
+</style>
+
+<div id="hero"><canvas id="c"></canvas></div>
+
+<script>
+/* ==========================================================================
+   MOIRÉ — the hero animation
+   ==========================================================================
+   Two identical grids of curved lines, stacked one on top of the other,
+   with one of them turned by a fraction of a degree — and the whole thing
+   cut into a shape that never stops changing.
+
+   Three things are happening at once:
+
+     1. THE LINES.  Two grids overlap. Every dark band you see sweeping
+        across is an illusion made by that overlap — where one grid's lines
+        fall into the other's gaps the surface goes solid; where they line
+        up you see through to the paper. Turn one grid a hair further and
+        those bands race across, even though neither grid appears to move.
+
+     2. THE BEND.  Both grids are pushed through a slow travelling wave, so
+        the lines aren't ruled — they flex and pour. The bands they make
+        come out curved and liquid instead of straight.
+
+     3. THE SHAPE.  Everything is cut into an outline that breathes between
+        an organic blob and a soft-edged panel, wanders slowly around the
+        frame, and has a hole drifting through it. It never sits still and
+        never repeats, because every part of it moves on a different clock.
+
+     4. THE DAMAGE.  That outline is then wrecked on purpose. A lumpy noise
+        field chews the edge into something torn rather than drawn, and a
+        second field cracks the inside open along thin forked splits — the
+        page showing through like lightning running under the surface. The
+        splits widen as they near the rim, so pieces break away from the
+        main mass and float on their own.
+
+   A click stirs all three: the field spins and the shape morphs faster,
+   then both settle.
+
+   To change the feel, edit the CONFIG numbers below. Everything else can be
+   left alone.
+   ========================================================================== */
+(function(){
+
+  /* ---- CONFIG · THE LINES (safe to tweak) -------------------------------
+
+     PERIOD      Line spacing, in screen pixels. Smaller = finer, more like a
+                 woven texture. Larger = you clearly read separate lines.
+                 4 = a fine weave · 8 = current · 14 = coarse and graphic.
+                 Too fine and the bands stop reading as bands — the whole
+                 thing collapses into grey noise. 8 is about the floor.
+
+     DUTY        How much of each step is ink, 0 to 1. 0.5 means the line is
+                 as thick as the gap beside it. This also sets how heavy the
+                 whole panel sits: the field averages out at roughly
+                 1-(1-DUTY)² ink, so 0.26 lands near 45% — present, not loud.
+                 Push past 0.4 and the panel starts to overpower the page.
+
+     ANGLE_MIN   The turn between the two grids, in degrees, at its narrowest
+     ANGLE_MAX   and its widest. THIS is the dial that matters most. A tiny
+                 angle makes enormous, slow, sweeping bands. A bigger angle
+                 makes tight, busy ones. The animation breathes between the
+                 two numbers forever.
+
+     BREATH_SEC  Seconds for one full journey from MIN out to MAX and back.
+
+     TURN_SEC    Seconds for the whole pattern to rotate once. Very long on
+                 purpose — you should never catch it turning.
+
+     DRIFT_A/B   How fast each grid slides sideways, in lines per second.
+                 Keep these small and DIFFERENT from each other. The lines
+                 themselves creep; the bands they produce move far faster.
+     ---------------------------------------------------------------------- */
+  var PERIOD      = 8.0;
+  var DUTY        = 0.26;
+  var ANGLE_MIN   = 0.5;
+  var ANGLE_MAX   = 2.8;
+  var BREATH_SEC  = 38;
+  var TURN_SEC    = 840;
+  var DRIFT_A     =  0.055;
+  var DRIFT_B     = -0.041;
+  var CLICK_KICK  = 26;     /* degrees per second the click spins it */
+  var KICK_DECAY  = 1.7;    /* seconds for that spin to die away */
+
+  /* ---- CONFIG · THE BEND ------------------------------------------------
+
+     This is what makes the lines curve instead of run straight. Both grids
+     get pushed sideways by a slow, wide, travelling wave.
+
+     WARP_AMOUNT How far the lines get shoved, in screen pixels. 0 turns the
+                 bend off completely and you're back to ruled straight lines.
+                 34 = current · 60 is very liquid · past ~90 it stops reading
+                 as lines at all and turns into smoke.
+
+     WARP_SCALE  How wide one wave is, in screen pixels. Small numbers make a
+                 tight, agitated ripple; large numbers make broad, lazy
+                 curves. Keep it well above PERIOD — if the wave gets close
+                 to the line spacing the pattern tears itself apart.
+
+     WARP_SEC    Seconds for the wave to travel through once.
+     ---------------------------------------------------------------------- */
+  var WARP_AMOUNT = 34;
+  var WARP_SCALE  = 260;
+  var WARP_SEC    = 29;
+
+  /* ---- CONFIG · THE SHAPE -----------------------------------------------
+
+     The outline everything is cut into. Set SHAPE_ON to false and the
+     animation goes back to filling the whole rectangle, as it used to.
+
+     SHAPE_FILL   How much of the frame the shape takes up, 0 to 1. 0.92
+                  leaves a thin breath of page around it. Above 1.0 it starts
+                  running off the edges, which can look good — try 1.15.
+
+     SHAPE_SEC    Seconds for one full journey from blob, out to panel, and
+                  back to blob. This is the shape's main heartbeat.
+
+     SHAPE_BEND   How far the organic edge bulges in and out. 0 gives a clean
+                  ellipse with no character; 0.2 is current; past 0.4 it gets
+                  spiky and starts to look like a splat.
+
+     SHAPE_DRIFT  Seconds for the shape to wander once around the frame. Long
+                  and slow — you should notice it has moved, not watch it move.
+
+     HOLE_ON      Whether a clean round hole drifts through the shape. Off:
+                  the cracks below open the shape up in a way that suits it
+                  better, and the circle read as a mistake next to them. Set
+                  it back to true if you ever want it.
+     HOLE_SIZE    How big that hole is, relative to the shape.
+     HOLE_SEC     Seconds for the hole to travel its loop once.
+     ---------------------------------------------------------------------- */
+  var SHAPE_ON    = true;
+  var SHAPE_FILL  = 0.92;
+  var SHAPE_SEC   = 46;
+  var SHAPE_BEND  = 0.20;
+  var SHAPE_DRIFT = 74;
+  var HOLE_ON     = false;
+  var HOLE_SIZE   = 0.26;
+  var HOLE_SEC    = 63;
+
+  /* ---- CONFIG · THE DAMAGE ----------------------------------------------
+
+     What takes the shape from "drawn" to "torn". Two separate effects.
+
+     THE CHEWED EDGE
+
+     EDGE_MESS    How hard the outline gets bitten into, as a fraction of the
+                  shape's own size. 0 gives you back the clean edge exactly
+                  as it was. 0.08 is a rough deckle, like torn paper. 0.18 is
+                  current — properly ragged, with real bays and headlands.
+                  Past 0.3 the shape loses its silhouette and reads as a
+                  cloud of debris instead of a form.
+
+     EDGE_SCALE   How big the bites are. Small numbers = a few huge lobes
+                  taken out of the side. Large numbers = a fine, gnawed
+                  fray all the way round. 2.6 mixes both.
+
+     EDGE_SEC     Seconds for the ragged edge to crawl through one cycle.
+                  Long — the mess should churn, never flicker.
+
+     THE CRACKS
+
+     CRACK_ON     Whether the inside splits open at all.
+
+     CRACK_WIDTH  How wide the splits are, in shape units. 0.006 = hairlines
+                  you have to look for. 0.011 = current — present, but the
+                  form still reads as one piece. 0.03 = the shape is coming
+                  apart with the page pouring through it.
+
+     CRACK_SCALE  How dense the cracking is — more means more forks, closer
+                  together, each one shorter.
+
+     CRACK_JAG    How violently the splits zigzag. 0 gives smooth rivers
+                  through the shape; 2.2 gives the forked, angular, lightning
+                  break. Past 3 they scribble and stop reading as cracks.
+
+     CRACK_FLARE  How much wider a crack gets as it approaches the outer
+                  edge. This is what snaps shards off the rim. 1 = uniform
+                  width everywhere, 1.9 = current.
+
+     CRACK_BRANCH How strong the finer second set of splits is, as a fraction
+                  of the main ones. 0 turns them off and leaves clean single
+                  splits; 0.28 is current — the offshoots are there but stay
+                  hairlines; past 0.5 they compete with the main splits.
+
+     CRACK_SEC    Seconds for the crack field to travel and re-form once.
+     ---------------------------------------------------------------------- */
+  var EDGE_MESS   = 0.21;
+  var EDGE_SCALE  = 2.6;
+  var EDGE_SEC    = 40;
+  var CRACK_ON    = true;
+  var CRACK_WIDTH = 0.011;
+  var CRACK_SCALE = 1.0;
+  var CRACK_JAG   = 1.1;
+  var CRACK_FLARE = 1.9;
+  var CRACK_BRANCH= 0.28;
+  var CRACK_SEC   = 54;
+  /* ---------------------------------------------------------------------- */
+
+  var DEG = Math.PI / 180;
+  var TAU = Math.PI * 2;
+
+  /* Colours. The site posts its current palette in; these are just the values
+     used before that first message arrives. */
+  var bg  = [0.067, 0.067, 0.067];   /* the paper  */
+  var ink = [0.690, 0.690, 0.690];   /* the lines  */
+
+  var host   = document.getElementById('hero');
+  var canvas = document.getElementById('c');
+
+  /* Users who've asked their system for less motion get a still frame. */
+  var STILL = window.matchMedia &&
+              window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ======================================================================
+     THE SHADER — this runs once per pixel, on the graphics card.
+     ======================================================================
+     For a given pixel it: bends the coordinates through the travelling wave,
+     asks each grid "is there ink here?", stacks the two answers the way two
+     printed transparencies stack, then asks the shape "are you even inside
+     me?" and fades to nothing if the answer is no.
+     ====================================================================== */
+  var VERT =
+    'attribute vec2 p;' +
+    'void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
+
+  var FRAG = [
+    'precision highp float;',
+    'uniform vec2  uRes;',
+    'uniform float uPeriod;',
+    'uniform float uDuty;',
+    'uniform float uAngA;',
+    'uniform float uAngB;',
+    'uniform float uOffA;',
+    'uniform float uOffB;',
+    'uniform vec3  uBg;',
+    'uniform vec3  uInk;',
+    'uniform float uWarpAmp;',      /* the bend, in pixels                  */
+    'uniform float uWarpK;',        /* the bend, in radians per pixel       */
+    'uniform float uWarpPhase;',    /* where the travelling wave is now     */
+    'uniform float uShapeOn;',      /* 1 = cut to shape, 0 = fill the frame */
+    'uniform float uShapeK;',       /* 0 = blob, 1 = panel                  */
+    'uniform float uShapeFill;',
+    'uniform float uShapeBend;',
+    'uniform float uShapePhase;',   /* rolls the organic edge around        */
+    'uniform vec2  uShapeOff;',     /* where the shape has wandered to      */
+    'uniform vec3  uHole;',         /* x, y, radius — 0 radius = no hole    */
+    'uniform float uMess;',         /* how hard the outline is chewed       */
+    'uniform float uMessK;',        /* how big the bites are                */
+    'uniform float uMessPhase;',
+    'uniform float uCrackW;',       /* 0 = no cracks                        */
+    'uniform float uCrackK;',
+    'uniform float uCrackJag;',
+    'uniform float uCrackFlare;',
+    'uniform float uCrackBranch;',
+    'uniform float uCrackPhase;',
+
+    /* ---- THE BEND -------------------------------------------------------
+       Pushes a point sideways by two overlapping waves — one broad, one
+       finer and weaker. We also hand back how fast that push is changing,
+       because the anti-aliasing below needs to know how stretched the lines
+       have become at this exact spot. Without that the bent areas would
+       crawl with noise. */
+    'void bend(vec2 p, out vec2 W, out vec2 dWdx, out vec2 dWdy){',
+    '  float k = uWarpK, ph = uWarpPhase, A = uWarpAmp, A2 = uWarpAmp * 0.38;',
+    '  float c1 = k * p.y * 1.00 + ph;',
+    '  float c2 = k * p.x * 0.83 - ph * 0.87;',
+    '  float c3 = k * p.x * 2.10 + ph * 1.43;',
+    '  float c4 = k * p.y * 1.90 - ph * 1.19;',
+    '  W    = p + vec2(A * sin(c1) + A2 * sin(c3), A * sin(c2) + A2 * sin(c4));',
+    '  dWdx = vec2(1.0 + A2 * k * 2.10 * cos(c3), A  * k * 0.83 * cos(c2));',
+    '  dWdy = vec2(A  * k * 1.00 * cos(c1),       1.0 + A2 * k * 1.90 * cos(c4));',
+    '}',
+
+    /* Area under the line pattern from 0 up to x, where the pattern is
+       "ink for the first DUTY of every step, paper for the rest". */
+    'float pulseInt(float x, float duty){',
+    '  return floor(x) * duty + min(fract(x), duty);',
+    '}',
+
+    /* How much of THIS pixel the lines cover — measured as an area, not
+       sampled at a point. That distinction is the whole reason this looks
+       clean: when the lines get finer than a single pixel the answer fades
+       smoothly to an even tone instead of breaking up into crawling noise. */
+    'float grating(float t, float duty, float w){',
+    '  w = max(w, 1e-5);',
+    '  return clamp((pulseInt(t + w*0.5, duty) - pulseInt(t - w*0.5, duty)) / w, 0.0, 1.0);',
+    '}',
+
+    /* ---- THE MESS -------------------------------------------------------
+       A lumpy random field, used below both to chew the outline and to crack
+       the inside open. It's built the usual way: scatter random numbers on a
+       grid, blend smoothly between them, then stack a few of those at
+       doubling frequencies so you get big shapes with small detail riding on
+       top. Nothing here is drawn by hand — it's the same field sampled at
+       different sizes. */
+    'float hash21(vec2 p){',
+    '  vec3 h = fract(vec3(p.xyx) * 0.1031);',
+    '  h += dot(h, h.yzx + 33.33);',
+    '  return fract((h.x + h.y) * h.z);',
+    '}',
+    'float vnoise(vec2 p){',
+    '  vec2 i = floor(p), f = fract(p);',
+    '  vec2 u = f * f * (3.0 - 2.0 * f);',
+    '  float a = hash21(i),               b = hash21(i + vec2(1.0, 0.0));',
+    '  float c = hash21(i + vec2(0.0,1.0)), e = hash21(i + vec2(1.0, 1.0));',
+    '  return mix(mix(a, b, u.x), mix(c, e, u.x), u.y);',
+    '}',
+    /* two layers — cheap, for the wide slow stuff */
+    'float fbm2(vec2 p){',
+    '  return 0.63 * vnoise(p) + 0.37 * vnoise(p * 2.13 + 19.3);',
+    '}',
+    /* four layers — the detailed one, always lands between 0 and 1 */
+    'float fbm4(vec2 p){',
+    '  float s = 0.0, a = 0.5, n = 0.0;',
+    '  for(int i = 0; i < 4; i++){',
+    '    s += a * vnoise(p); n += a;',
+    '    p = p * 2.07 + vec2(17.3, 9.7); a *= 0.5;',
+    '  }',
+    '  return s / n;',
+    '}',
+
+    /* Two noise values at once, for pushing a point around. */
+    'vec2 nvec(vec2 p){',
+    '  return vec2(vnoise(p), vnoise(p + vec2(5.2, 1.3)));',
+    '}',
+
+    /* Same, but folded at the halfway mark. Folding puts a hard crease into
+       what was a smooth hill — and a crease in the map that drags the field
+       around is what makes the split below turn a sharp corner instead of
+       curving. This is the difference between a river and a bolt. */
+    'vec2 crease(vec2 p){',
+    '  return abs(nvec(p) - 0.5) * 2.0 - 0.5;',
+    '}',
+
+    /* ---- THE CRACK FIELD ------------------------------------------------
+       One lumpy field, dragged out of shape three times before it's read:
+       a broad shove, then half that at twice the rate, then half again —
+       the same recipe that makes a coastline look like a coastline at every
+       distance. Every shove is creased, so what comes out is a run of
+       near-straight segments meeting at hard angles. Read the value here;
+       the line itself is found in main(). */
+    'float crackField(vec2 p, float ph, float jag){',
+    '  p += crease(p * 1.10 + vec2(ph,          4.70)) * jag;',
+    '  p += crease(p * 2.60 + vec2(-3.10, ph * 0.83))  * jag * 0.35;',
+    '  p += crease(p * 6.30 + vec2(ph * 0.70,  11.20)) * jag * 0.12;',
+    '  return fbm2(p);',
+    '}',
+
+    /* How far this pixel is from where the field crosses its own halfway
+       mark — that crossing is the crack. Dividing by how fast the field is
+       changing here is what keeps the split an even width instead of
+       pooling into puddles wherever the field goes flat. */
+    'float lineDist(float f, float px, float k){',
+    '#ifdef DERIV',
+    '  float g = max(fwidth(f), 1e-6);',
+    '#else',
+    '  float g = max(0.30 * k / px, 1e-6);',
+    '#endif',
+    '  return abs(f - 0.5) / (g * px);',
+    '}',
+
+    /* ---- THE SHAPE ------------------------------------------------------
+       Two outlines, blended. Both are written as "how far outside me are
+       you?" — negative inside, zero exactly on the edge, positive outside.
+       Mixing the two numbers morphs one form into the other. */
+
+    /* A soft-cornered panel. */
+    'float sdPanel(vec2 q, vec2 b, float r){',
+    '  vec2 d = abs(q) - b + r;',
+    '  return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - r;',
+    '}',
+
+    /* An organic blob: a circle whose radius wanders with the angle. The
+       three waves use whole numbers (3, 5, 7) so the edge closes seamlessly
+       instead of showing a join. */
+    'float sdBlob(vec2 q, float fill, float bend, float ph){',
+    '  float a = atan(q.y, q.x);',
+    '  float R = fill * (1.0 + bend * (sin(3.0*a + ph)        * 0.55',
+    '                                + sin(5.0*a - ph * 0.77) * 0.30',
+    '                                + sin(7.0*a + ph * 1.31) * 0.15));',
+    '  return length(q) - R;',
+    '}',
+
+    'void main(){',
+    '  vec2 px = gl_FragCoord.xy - uRes * 0.5;',   /* turn about the centre */
+
+    /* Bend the world, then read the two grids out of the bent version. */
+    '  vec2 W, dWdx, dWdy;',
+    '  bend(px, W, dWdx, dWdy);',
+
+    /* Distance across each grid, counted in lines. */
+    '  vec2 nA = vec2(cos(uAngA), sin(uAngA));',
+    '  vec2 nB = vec2(cos(uAngB), sin(uAngB));',
+    '  float tA = dot(W, nA) / uPeriod + uOffA;',
+    '  float tB = dot(W, nB) / uPeriod + uOffB;',
+
+    /* How many lines wide one pixel is here, now that things are bent. */
+    '  float wA = (abs(dot(dWdx, nA)) + abs(dot(dWdy, nA))) / uPeriod;',
+    '  float wB = (abs(dot(dWdx, nB)) + abs(dot(dWdy, nB))) / uPeriod;',
+
+    '  float a = grating(tA, uDuty, wA);',
+    '  float b = grating(tB, uDuty, wB);',
+
+    /* Two transparencies stacked: clear only where both are clear. */
+    '  float cover = 1.0 - (1.0 - a) * (1.0 - b);',
+    '  vec3  col   = mix(uBg, uInk, cover);',
+
+    /* ---- cut it to the shape ---- */
+    '  float m = 1.0;',
+    '  if(uShapeOn > 0.5){',
+    /*   A working space where "1.0" means the short edge of the frame, then
+         stretched sideways so the shape spans a wide hero instead of sitting
+         in the middle as a circle. */
+    '    float S       = 0.5 * min(uRes.x, uRes.y);',
+    '    float aspect  = uRes.x / max(uRes.y, 1.0);',
+    '    float stretch = mix(1.0, aspect, 0.85);',
+    '    vec2  q       = (px / S - uShapeOff) / vec2(stretch, 1.0);',
+    '    float pxScale = S * mix(1.0, stretch, 0.5);',   /* q units -> pixels */
+
+    '    float dBlob  = sdBlob(q, uShapeFill, uShapeBend, uShapePhase);',
+    '    float dPanel = sdPanel(q, vec2(uShapeFill * 1.02, uShapeFill * 0.94),',
+    '                              uShapeFill * 0.38);',
+    '    float d      = mix(dBlob, dPanel, uShapeK);',
+
+    /*   CHEW THE EDGE. Push the whole outline in and out by a lumpy amount
+         that changes from place to place — a wide lumpy field for the bays
+         and headlands, a finer one on top for the fray. Because it's pushed
+         both ways it eats holes into the rim and throws spurs off it. */
+    '    if(uMess > 0.0 && abs(d) < uMess * 2.4){',
+    '      vec2  nq = q * uMessK;',
+    '      float e1 = fbm4(nq        + vec2(uMessPhase,        -uMessPhase * 0.63));',
+    '      float e2 = crease(nq * 3.10 + vec2(-uMessPhase * 1.70, uMessPhase * 0.90)).x;',
+    '      float e3 = vnoise(nq * 8.70 + vec2(uMessPhase * 2.30, -uMessPhase));',
+    '      d -= uMess * ((e1 - 0.5) * 1.45 + e2 * 0.95 + (e3 - 0.5) * 0.34);',
+    '    }',
+
+    /*   CRACK IT OPEN. Take the same kind of field and follow the line where
+         it crosses its own halfway mark. That line wanders, forks and dead
+         ends all by itself — exactly how a split runs. Warping the field
+         first with another copy of itself is what makes it strike in angular
+         zigzags instead of meandering. Whatever the line touches gets cut
+         out of the shape, so the page shows through it.
+
+         Two things stop it becoming a uniform net: a slow patchy mask, so
+         whole districts of the shape stay solid, and a flare that widens
+         every crack as it nears the rim, which snaps shards off the edge.
+
+         Both this and the chewing above are skipped for any pixel too far
+         from the edge for them to matter — the noise is the expensive part
+         of the whole animation and most of the frame doesn't need it. */
+    '    if(uCrackW > 0.0 && d < 0.02){',
+    '      vec2  cq = q * uCrackK;',
+
+    /*     The crack is the line where the field crosses its own halfway
+           mark. How far away we are from it is |f - 0.5| divided by how
+           fast f is changing here — without that division the splits would
+           pool into puddles wherever the field happens to go flat, instead
+           of running at an even width like a real tear. */
+    /*     Patchy, so whole districts of the shape stay solid; broken along
+           its length, so a split runs and stops rather than crossing the
+           whole form; flared, so it opens up as it reaches the rim and
+           shears pieces off the edge. */
+    '      float patch = smoothstep(0.34, 0.60,',
+    '                    fbm2(q * 0.80 + vec2(-uCrackPhase * 0.40, uCrackPhase * 0.30)));',
+    '      float run   = smoothstep(0.24, 0.56,',
+    '                    fbm2(q * 1.60 + vec2(uCrackPhase * 0.70, -uCrackPhase)));',
+    '      float w = uCrackW * patch * (0.35 + 0.65 * run)',
+    '              * mix(1.0, uCrackFlare, smoothstep(-0.45, 0.02, d));',
+
+    /*     The main splits. */
+    '      float f1 = crackField(cq, uCrackPhase, uCrackJag);',
+    '      d = max(d, w - lineDist(f1, pxScale, uCrackK));',
+
+    /*     A second, finer set laid over the first at a different size. Where
+           the two touch they read as one split throwing off a branch, which
+           is what stops the cracking looking like a single drawn line. */
+    '      float f2 = crackField(cq * 2.30 + 11.7, uCrackPhase * 1.30, uCrackJag * 0.85);',
+    '      if(uCrackBranch > 0.0)',
+    '        d = max(d, w * uCrackBranch - lineDist(f2, pxScale, uCrackK * 2.30));',
+    '    }',
+
+    /*   Punch the hole out: "inside me AND outside the hole". */
+    '    if(uHole.z > 0.0) d = max(d, -(length(q - uHole.xy) - uHole.z));',
+
+    /*   Turn that distance into pixels so the edge lands soft but crisp. */
+    '    m = 1.0 - smoothstep(-1.25, 1.25, d * pxScale);',
+    '  }',
+
+    /* Premultiplied: the page shows through wherever the shape isn't. */
+    '  gl_FragColor = vec4(col * m, m);',
+    '}'
+  ].join('\n');
+
+  /* ---------------------------------------------------------------------- */
+
+  var gl = null, prog = null, U = {}, dpr = 1;
+
+  function compile(type, src){
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+      /* Shout about it rather than quietly dropping to the CSS fallback —
+         a typo in the shader is otherwise almost impossible to spot. */
+      if(window.console) console.error('[moire] shader failed:', gl.getShaderInfoLog(s));
+      return null;
+    }
+    return s;
+  }
+
+  function initGL(){
+    try{
+      /* alpha:true so the page shows through outside the shape. */
+      gl = canvas.getContext('webgl',   { antialias:false, alpha:true, depth:false }) ||
+           canvas.getContext('experimental-webgl', { antialias:false, alpha:true, depth:false });
+    }catch(e){ gl = null; }
+    if(!gl) return false;
+
+    /* Derivatives let the shader ask "how fast is this changing right here?",
+       which is how the cracks hold an even width. Every browser we care about
+       has it; if one doesn't, the shader falls back to an estimate. */
+    var head = gl.getExtension('OES_standard_derivatives')
+             ? '#extension GL_OES_standard_derivatives : enable\n#define DERIV 1\n'
+             : '';
+
+    var vs = compile(gl.VERTEX_SHADER, VERT);
+    var fs = compile(gl.FRAGMENT_SHADER, head + FRAG);
+    if(!vs || !fs) return false;
+
+    prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+    gl.useProgram(prog);
+
+    /* One rectangle covering the screen. The shader does the rest. */
+    var buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER,
+      new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+    var loc = gl.getAttribLocation(prog, 'p');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+    ['uRes','uPeriod','uDuty','uAngA','uAngB','uOffA','uOffB','uBg','uInk',
+     'uWarpAmp','uWarpK','uWarpPhase',
+     'uShapeOn','uShapeK','uShapeFill','uShapeBend','uShapePhase','uShapeOff','uHole',
+     'uMess','uMessK','uMessPhase','uCrackW','uCrackK','uCrackJag','uCrackFlare',
+     'uCrackBranch','uCrackPhase']
+      .forEach(function(n){ U[n] = gl.getUniformLocation(prog, n); });
+
+    return true;
+  }
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.max(1, Math.round(host.clientWidth  * dpr));
+    var h = Math.max(1, Math.round(host.clientHeight * dpr));
+    if(canvas.width === w && canvas.height === h) return;
+    canvas.width = w; canvas.height = h;
+    if(gl) gl.viewport(0, 0, w, h);
+  }
+
+  /* ======================================================================
+     THE MOTION
+     ====================================================================== */
+  var clock   = 0;          /* seconds of animation elapsed        */
+  var shClock = 0;          /* the shape runs on its own clock, so a click
+                               can hurry it along without touching the rest */
+  var last    = 0;
+  /* Where the pair of grids points. The bands always run at right angles to
+     the lines, so near-horizontal lines put the bands across the hero's long
+     side — the orientation with room for several of them. The slow turn below
+     carries it everywhere else in its own time. */
+  var baseAng = (60 + Math.random() * 60) * DEG;
+  var kick    = 0;          /* leftover spin from a click  */
+  var morph   = 0;          /* leftover hurry from a click */
+
+  /* Everything below starts somewhere random, so no two visits open on the
+     same frame and nothing ever lines up into an obvious loop. */
+  var seed = Math.random() * 1000;
+
+  function draw(){
+    /* The angle between the two grids, easing between MIN and MAX forever.
+       Everything dramatic on screen comes from this one number. */
+    var s     = 0.5 - 0.5 * Math.cos(clock * TAU / BREATH_SEC);
+    var alpha = (ANGLE_MIN + (ANGLE_MAX - ANGLE_MIN) * s) * DEG;
+
+    var angA = baseAng - alpha * 0.5;
+    var angB = baseAng + alpha * 0.5;
+
+    /* Keep the slide values small so precision never drifts. */
+    var offA = (clock * DRIFT_A) % 1;
+    var offB = (clock * DRIFT_B) % 1;
+
+    /* The shape. Each part runs on a period that doesn't divide into the
+       others, which is what stops the whole thing from ever repeating. */
+    var shapeK = 0.5 - 0.5 * Math.cos(shClock * TAU / SHAPE_SEC);
+    var shPh   = seed + shClock * TAU / (SHAPE_SEC * 1.73);
+    var drift  = shClock * TAU / SHAPE_DRIFT;
+    var offX   = Math.cos(drift) * 0.085 + Math.cos(drift * 1.9 + seed) * 0.035;
+    var offY   = Math.sin(drift * 0.8) * 0.075;
+
+    var holeR = 0, holeX = 0, holeY = 0;
+    if(HOLE_ON){
+      var hp = shClock * TAU / HOLE_SEC + seed;
+      /* The hole breathes open and shut as it travels, so it arrives and
+         leaves rather than just orbiting forever. */
+      var open = Math.max(0, Math.sin(shClock * TAU / (HOLE_SEC * 0.61) + seed));
+      holeR = HOLE_SIZE * SHAPE_FILL * open;
+      holeX = Math.cos(hp) * 0.42;
+      holeY = Math.sin(hp * 1.3) * 0.34;
+    }
+
+    gl.uniform2f(U.uRes, canvas.width, canvas.height);
+    gl.uniform1f(U.uPeriod, PERIOD * dpr);
+    gl.uniform1f(U.uDuty, DUTY);
+    gl.uniform1f(U.uAngA, angA);
+    gl.uniform1f(U.uAngB, angB);
+    gl.uniform1f(U.uOffA, offA);
+    gl.uniform1f(U.uOffB, offB);
+    gl.uniform3f(U.uBg,  bg[0],  bg[1],  bg[2]);
+    gl.uniform3f(U.uInk, ink[0], ink[1], ink[2]);
+
+    gl.uniform1f(U.uWarpAmp,   WARP_AMOUNT * dpr);
+    gl.uniform1f(U.uWarpK,     TAU / Math.max(1, WARP_SCALE * dpr));
+    gl.uniform1f(U.uWarpPhase, seed + clock * TAU / WARP_SEC);
+
+    gl.uniform1f(U.uShapeOn,    SHAPE_ON ? 1 : 0);
+    gl.uniform1f(U.uShapeK,     shapeK);
+    gl.uniform1f(U.uShapeFill,  SHAPE_FILL);
+    gl.uniform1f(U.uShapeBend,  SHAPE_BEND);
+    gl.uniform1f(U.uShapePhase, shPh);
+    gl.uniform2f(U.uShapeOff,   offX, offY);
+    gl.uniform3f(U.uHole,       holeX, holeY, holeR);
+
+    /* The damage drifts on the shape's clock, so a click stirs it too. The
+       cracks also breathe wider and narrower on a period that doesn't line
+       up with anything else — they open, run, and heal over. */
+    var crackOpen = 0.55 + 0.45 * (0.5 - 0.5 * Math.cos(shClock * TAU / (CRACK_SEC * 0.71)));
+    gl.uniform1f(U.uMess,       EDGE_MESS);
+    gl.uniform1f(U.uMessK,      EDGE_SCALE);
+    gl.uniform1f(U.uMessPhase,  seed + shClock * 3.0 / EDGE_SEC);
+    gl.uniform1f(U.uCrackW,     CRACK_ON ? CRACK_WIDTH * crackOpen : 0);
+    gl.uniform1f(U.uCrackK,     CRACK_SCALE);
+    gl.uniform1f(U.uCrackJag,   CRACK_JAG);
+    gl.uniform1f(U.uCrackFlare, CRACK_FLARE);
+    gl.uniform1f(U.uCrackBranch, CRACK_BRANCH);
+    gl.uniform1f(U.uCrackPhase, seed * 1.7 + shClock * 3.0 / CRACK_SEC);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  function frame(ts){
+    var dt = last ? (ts - last) / 1000 : 0;
+    last = ts;
+    if(dt > 0.1) dt = 0.1;              /* tab was hidden: don't fast-forward */
+
+    if(!document.hidden){
+      clock += dt;
+      /* A click makes the shape hurry; it eases back to normal speed. */
+      shClock += dt * (1 + morph);
+      baseAng += (TAU / TURN_SEC) * dt;           /* the slow constant turn */
+      if(kick !== 0){                             /* plus whatever a click added */
+        baseAng += kick * DEG * dt;
+        kick *= Math.exp(-dt / KICK_DECAY);
+        if(Math.abs(kick) < 0.01) kick = 0;
+      }
+      if(morph !== 0){
+        morph *= Math.exp(-dt / (KICK_DECAY * 1.6));
+        if(morph < 0.01) morph = 0;
+      }
+      resize();
+      draw();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* A click sends the whole field spinning and hurries the shape along,
+     then both settle again. */
+  host.addEventListener('click', function(){
+    if(STILL) return;
+    kick  = (Math.random() < 0.5 ? -1 : 1) * CLICK_KICK * (0.7 + Math.random() * 0.6);
+    morph = 5 + Math.random() * 4;
+  });
+
+  window.addEventListener('resize', function(){ resize(); if(gl && STILL) draw(); });
+
+  /* ======================================================================
+     PALETTE — the site posts its current colours in whenever the slider moves.
+     ====================================================================== */
+  function toRGB(hex){
+    hex = String(hex).replace('#','');
+    if(hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+    var n = parseInt(hex, 16);
+    if(isNaN(n) || hex.length !== 6) return null;
+    return [((n>>16)&255)/255, ((n>>8)&255)/255, (n&255)/255];
+  }
+  function applyColors(p){
+    var a = p.fill   && toRGB(p.fill);
+    var b = p.stroke && toRGB(p.stroke);
+    if(a) bg  = a;
+    if(b) ink = b;
+    if(cssBlob) cssBlob.style.color = p.stroke || '';
+    if(gl && STILL) draw();
+  }
+  try{                                  /* first paint via URL hash, if present */
+    var h = location.hash.slice(1);
+    if(h){
+      var q = {};
+      h.split('&').forEach(function(kv){ var x = kv.split('='); q[x[0]] = decodeURIComponent(x[1]||''); });
+      applyColors(q);
+    }
+  }catch(e){}
+  window.addEventListener('message', function(ev){
+    var d = ev.data;
+    if(d && d.type === 'heroColors') applyColors(d);
+  });
+
+  /* ======================================================================
+     FALLBACK — if the browser can't do WebGL, build the same two grids out
+     of plain CSS instead. Coarser, and the lines can't bend, but it's still
+     a real moiré and it still sits in a shape that keeps changing.
+     ====================================================================== */
+  var cssBlob = null;
+  function cssFallback(){
+    canvas.style.display = 'none';
+    var mk = function(deg){
+      var d = document.createElement('div');
+      d.style.cssText = 'position:absolute;inset:-50%;transform:rotate(' + deg + 'deg)';
+      d.style.background = 'repeating-linear-gradient(90deg,' +
+        'currentColor 0 ' + (PERIOD*DUTY) + 'px, transparent ' + (PERIOD*DUTY) + 'px ' + PERIOD + 'px)';
+      return d;
+    };
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;inset:0;overflow:hidden';
+    if(SHAPE_ON){
+      /* Lopsided, animated corner radii are the cheapest honest way to get a
+         blob that keeps changing without a graphics card. */
+      wrap.style.willChange = 'border-radius';
+    }
+    var a = mk(0), b = mk(ANGLE_MIN);
+    b.style.mixBlendMode = 'multiply';
+    wrap.appendChild(a); wrap.appendChild(b);
+    host.appendChild(wrap);
+    cssBlob = wrap;
+    var t0 = performance.now();
+    (function spin(ts){
+      var k = (ts - t0) / 1000;
+      var s = 0.5 - 0.5 * Math.cos(k * 2 * Math.PI / BREATH_SEC);
+      b.style.transform = 'rotate(' + (ANGLE_MIN + (ANGLE_MAX - ANGLE_MIN) * s) + 'deg)';
+      if(SHAPE_ON){
+        var r = [], base = 50 - 22 * (0.5 - 0.5 * Math.cos(k * TAU / SHAPE_SEC));
+        for(var i = 0; i < 8; i++){
+          r.push((base + 18 * Math.sin(k * TAU / (SHAPE_SEC * (0.7 + i * 0.11)) + i)).toFixed(1) + '%');
+        }
+        wrap.style.borderRadius = r.slice(0,4).join(' ') + ' / ' + r.slice(4).join(' ');
+      }
+      if(!STILL) requestAnimationFrame(spin);
+    })(t0);
+  }
+
+  /* ---------------------------------------------------------------------- */
+  if(initGL()){
+    resize();
+    if(STILL){                      /* one good still frame: shape half-morphed,
+                                       bands wide open, a split running */
+      clock   = BREATH_SEC * 0.32;
+      shClock = SHAPE_SEC  * 0.30;
+      draw();
+    }
+    else requestAnimationFrame(frame);
+  }else{
+    cssFallback();
+  }
+})();
+</script>
