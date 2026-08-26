@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap');
+/* Inter, variable. The opsz (optical size) range is what makes this worth
+   loading over a static font: the letterforms actually change shape for the
+   size they're set at — tighter and finer for headings, looser and sturdier
+   for small text. The browser picks the right point on that axis by itself,
+   because of font-optical-sizing:auto on the root (see Site.jsx). */
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 /* Always keep room for the scrollbar, even on pages short enough not to need
    one. Without this, a short page (the Blog list) hides the scrollbar while a
    long one (Home, CV) shows it, the usable width changes by a few pixels, and
